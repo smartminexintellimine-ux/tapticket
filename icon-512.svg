@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="102" fill="#0a0f1e"/>
+  <rect x="41" y="41" width="430" height="430" rx="85" fill="#1a2235"/>
+  <!-- Bus body -->
+  <rect x="61" y="164" width="389" height="195" rx="31" fill="#2563eb"/>
+  <!-- Windows row -->
+  <rect x="87" y="189" width="72" height="61" rx="10" fill="#e0f0ff"/>
+  <rect x="179" y="189" width="72" height="61" rx="10" fill="#e0f0ff"/>
+  <rect x="271" y="189" width="72" height="61" rx="10" fill="#e0f0ff"/>
+  <rect x="364" y="189" width="72" height="61" rx="10" fill="#e0f0ff"/>
+  <!-- Wheels -->
+  <circle cx="138" cy="369" r="36" fill="#1e293b"/>
+  <circle cx="138" cy="369" r="15" fill="#64748b"/>
+  <circle cx="374" cy="369" r="36" fill="#1e293b"/>
+  <circle cx="374" cy="369" r="15" fill="#64748b"/>
+  <!-- TapTicket T text -->
+  <text x="256" y="143" font-family="Arial Black,sans-serif" font-weight="900" font-size="72" fill="#16c76a" text-anchor="middle" letter-spacing="1">TapTicket</text>
+  <!-- Green underline accent -->
+  <rect x="102" y="420" width="307" height="13" rx="5" fill="#16c76a"/>
+</svg>

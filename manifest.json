@@ -1,0 +1,42 @@
+{
+  "name": "TapTicket — Bus Ticketing Zimbabwe",
+  "short_name": "TapTicket",
+  "description": "Smart offline bus ticketing system for Zimbabwe conductors and bus owners",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07090f",
+  "theme_color": "#0a0f1e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "utilities"],
+  "lang": "en-ZW",
+  "shortcuts": [
+    {
+      "name": "Issue Ticket",
+      "short_name": "Issue",
+      "description": "Issue a new passenger or goods ticket",
+      "url": "/?tab=issue",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Back Office",
+      "short_name": "Dashboard",
+      "description": "View live revenue dashboard",
+      "url": "/?tab=backoffice",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

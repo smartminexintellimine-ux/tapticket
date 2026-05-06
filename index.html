@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#0a0f1e"/>
+<meta name="description" content="TapTicket — Smart Bus Ticketing for Zimbabwe"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="TapTicket"/>
+<title>TapTicket</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<!-- Firebase SDK v12 compat — matches your project -->
+<script src="https://www.gstatic.com/firebasejs/12.12.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.12.1/firebase-database-compat.js"></script>
+<!-- Hardcoded TapTicket Firebase project — auto-connects on load -->
+<script>
+  window.TAPTICKET_FB_CONFIG = {
+    apiKey:            "AIzaSyAy8B_hnP8c-69KbTVqLc4usnW6Mjc6pLY",
+    authDomain:        "tapticket-f4d49.firebaseapp.com",
+    databaseURL:       "https://tapticket-f4d49-default-rtdb.firebaseio.com",
+    projectId:         "tapticket-f4d49",
+    storageBucket:     "tapticket-f4d49.firebasestorage.app",
+    messagingSenderId: "638668632175",
+    appId:             "1:638668632175:web:21516040a1938f61881d9a",
+    measurementId:     "G-PZFDSVFPW9"
+  };
+</script>
+<style>
+:root{
+  --bg:#07090f;--bg2:#0f1623;--bg3:#1a2235;--bg4:#243048;
+  --border:#263044;--border2:#334155;
+  --text:#e8edf5;--muted:#5a7090;--dim:#334a66;
+  --green:#16c76a;--green2:#0f9950;--green-bg:#0a2818;
+  --red:#f04060;--red-bg:#2a0e16;
+  --amber:#f5a623;--amber-bg:#2a1a05;
+  --blue:#3d8ef0;--blue2:#2563eb;--blue-bg:#0d1f3c;
+  --purple:#8b5cf6;
+  --accent:#16c76a;
+  --radius:14px;--radius-sm:10px;--radius-xs:8px;
+  --font:'Space Grotesk',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;-webkit-font-smoothing:antialiased}
+input,button,select,textarea{font-family:var(--font);font-size:14px}
+input:focus{outline:none}
+button{cursor:pointer;border:none;background:none;color:inherit}
+button:active{opacity:.8;transform:scale(.98)}
+
+/* ── Layout ── */
+#root{display:flex;flex-direction:column;height:100vh;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+.screen{display:none;flex-direction:column;height:100vh;overflow:hidden}
+.screen.active{display:flex}
+.scrollable{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px 80px}
+.scrollable::-webkit-scrollbar{width:3px}
+.scrollable::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── Typography ── */
+.label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;margin-top:14px;display:block}
+.section-title{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+
+/* ── Inputs ── */
+.inp{width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:12px 14px;font-size:15px;font-family:var(--font);transition:border-color .2s}
+.inp:focus{border-color:var(--blue)}
+.inp::placeholder{color:var(--dim)}
+
+/* ── Buttons ── */
+.btn-primary{width:100%;padding:16px;border-radius:var(--radius);font-size:15px;font-weight:700;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;letter-spacing:.3px;transition:opacity .15s,transform .1s}
+.btn-primary:disabled{background:var(--bg3);color:var(--dim)}
+.btn-secondary{width:100%;padding:13px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;background:var(--bg3);border:1.5px solid var(--border2);color:var(--muted)}
+.btn-green{background:linear-gradient(135deg,#16c76a,#0f9950)}
+.btn-amber{background:linear-gradient(135deg,#f5a623,#d97706)}
+.btn-danger{background:var(--red-bg);border:1.5px solid var(--red);color:var(--red)}
+
+/* ── Cards ── */
+.card{background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.card-inset{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px}
+
+/* ── Header ── */
+.app-header{background:linear-gradient(180deg,#0f1a2e 0%,#0a1120 100%);border-bottom:1px solid var(--border);padding:12px 14px;flex-shrink:0;position:relative}
+
+/* ── Bottom Nav ── */
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;padding:6px 0 max(8px,env(safe-area-inset-bottom));z-index:50}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;color:var(--dim);font-size:10px;font-weight:600;letter-spacing:.3px;transition:color .2s;border:none;background:none}
+.nav-btn.active{color:var(--blue)}
+.nav-icon{font-size:18px;line-height:1}
+
+/* ── Segments ── */
+.seg{display:flex;border-radius:var(--radius-sm);overflow:hidden;border:1.5px solid var(--border2)}
+.seg-btn{flex:1;padding:10px 8px;font-size:13px;font-weight:600;background:transparent;color:var(--muted);border:none;transition:all .2s}
+.seg-btn.active{background:var(--blue2);color:#fff}
+
+/* ── Route chips ── */
+.route-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.route-chip{background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:left;transition:all .2s}
+.route-chip.selected{background:var(--blue-bg);border-color:var(--blue)}
+.route-chip-name{font-size:12px;font-weight:600;line-height:1.3}
+.route-chip-fare{font-size:12px;color:var(--green);font-weight:700;margin-top:2px}
+
+/* ── Row inputs ── */
+.row2{display:flex;gap:8px}
+.row2>*{flex:1}
+
+/* ── Quick amounts ── */
+.quick-amounts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.quick-chip{padding:6px 13px;border-radius:20px;border:1.5px solid var(--border2);background:var(--bg3);color:var(--text);font-size:12px;font-weight:600;transition:all .2s}
+.quick-chip.active{background:var(--blue2);border-color:var(--blue2);color:#fff}
+.quick-chip.exact{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+
+/* ── Ticket ── */
+.ticket{background:linear-gradient(135deg,#142040 0%,#0c1830 60%,#0a1020 100%);border:2px solid var(--green);border-radius:var(--radius);padding:14px;margin-bottom:12px;position:relative;overflow:hidden}
+.ticket.invalid{border-color:var(--red)}
+.ticket-watermark{position:absolute;inset:0;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.012) 0,rgba(255,255,255,.012) 1px,transparent 1px,transparent 9px);pointer-events:none}
+.ticket-header{display:flex;align-items:center;gap:8px;padding-bottom:10px;border-bottom:1px dashed rgba(255,255,255,.1);margin-bottom:10px}
+.company-badge{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ticket-company{font-size:11px;font-weight:700;line-height:1.2}
+.ticket-reg{font-size:9px;color:var(--muted)}
+.ticket-issued-by{margin-left:auto;font-size:9px;color:var(--dim);font-family:var(--mono)}
+.ticket-body{display:flex;justify-content:space-between;align-items:flex-start}
+.ticket-badge{font-size:9px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.8px}
+.ticket-route{font-size:16px;font-weight:700;font-family:var(--mono);margin:4px 0 2px}
+.ticket-sub{font-size:11px;color:var(--muted)}
+.ticket-amount{font-size:22px;font-weight:800;color:var(--green);font-family:var(--mono);text-align:right}
+.ticket-change-owed{font-size:11px;color:var(--amber);font-weight:700;text-align:right}
+.ticket-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.1)}
+.ticket-id{font-size:9px;color:var(--dim);font-family:var(--mono)}
+.ticket-actions{display:flex;flex-direction:column;gap:4px}
+.ticket-qr{width:42px;height:42px;border-radius:5px;image-rendering:pixelated}
+.btn-small{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;border:none}
+.badge-change{background:var(--red);color:#fff;animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* ── Stats row ── */
+.stats-row{display:flex;gap:8px;margin-bottom:12px}
+.stat-card{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center}
+.stat-val{font-size:17px;font-weight:800;line-height:1}
+.stat-lbl{font-size:9px;color:var(--muted);margin-top:3px;letter-spacing:.4px;text-transform:uppercase}
+
+/* ── Pay category grid ── */
+.pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.pay-cat{background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:left;transition:all .2s}
+.pay-cat.selected{background:var(--blue-bg);border-color:var(--blue)}
+.pay-cat-icon{font-size:22px;margin-bottom:4px}
+.pay-cat-label{font-size:11px;font-weight:600;line-height:1.3}
+
+/* ── Payment list item ── */
+.pay-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;border-left:3px solid var(--border)}
+
+/* ── PIN pad ── */
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;max-width:260px;margin-left:auto;margin-right:auto}
+.pin-key{height:68px;border-radius:14px;font-size:22px;font-weight:700;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);transition:all .1s}
+.pin-key:active{background:var(--bg4);transform:scale(.94)}
+.pin-key.empty{background:transparent;border:none;pointer-events:none}
+.pin-dots{display:flex;gap:14px;justify-content:center;margin:20px 0 8px}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);background:transparent;transition:all .2s}
+.pin-dot.filled{background:var(--blue);border-color:var(--blue)}
+.user-selector{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:20px}
+.user-pill{padding:8px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg3);font-size:13px;font-weight:600;transition:all .2s}
+.user-pill.active{border-color:var(--blue);background:var(--blue-bg);color:#fff}
+
+/* ── Checker ── */
+.check-result{margin-top:14px;border-radius:var(--radius);padding:16px;border:2px solid var(--border)}
+.check-result.valid{border-color:var(--green)}
+.check-result.invalid{border-color:var(--red)}
+.check-result.notfound{border-color:var(--amber)}
+.check-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+.check-key{color:var(--muted);font-size:12px}
+.check-val{font-weight:600;font-size:12px}
+
+/* ── Settings ── */
+.settings-user{background:linear-gradient(135deg,var(--blue-bg),#0a1020);border:1.5px solid var(--blue);border-radius:var(--radius);padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
+.avatar-big{width:52px;height:52px;border-radius:14px;background:var(--bg);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.settings-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.settings-item-left{flex:1}
+.settings-item-title{font-weight:700;font-size:14px;margin-bottom:2px}
+.settings-item-sub{font-size:11px;color:var(--muted)}
+.settings-edit-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--blue);border-radius:var(--radius-xs);padding:7px 13px;font-size:12px;font-weight:600}
+
+/* ── Back office ── */
+.backoffice-header{background:linear-gradient(135deg,#1a0a30,#0d0820);border:1.5px solid var(--purple);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px;animation:livepulse 1.5s infinite}
+@keyframes livepulse{0%,100%{box-shadow:0 0 0 0 rgba(22,199,106,.5)}50%{box-shadow:0 0 0 5px rgba(22,199,106,0)}}
+.bo-stat{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px;text-align:center}
+.bo-stat-val{font-size:20px;font-weight:800}
+.bo-stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.bo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.bo-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.activity-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)}
+.activity-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.activity-main{flex:1;min-width:0}
+.activity-title{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.activity-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.activity-amount{font-size:13px;font-weight:700;text-align:right;flex-shrink:0}
+
+/* ── Report ── */
+.report-modal{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.report-sheet{background:var(--bg2);border-radius:22px 22px 0 0;padding:20px 16px max(28px,env(safe-area-inset-bottom));width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+
+/* ── Share modal ── */
+.share-modal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:flex;align-items:flex-end;justify-content:center}
+.share-sheet{background:var(--bg2);border-radius:22px 22px 0 0;padding:20px 16px max(28px,env(safe-area-inset-bottom));width:100%;max-width:480px}
+
+/* ── Setup wizard ── */
+.setup-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 24px 32px;background:var(--bg)}
+.setup-step-dots{display:flex;gap:8px;margin-bottom:36px}
+.step-dot{height:8px;border-radius:4px;background:var(--bg3);transition:all .3s}
+
+/* ── Logo grid ── */
+.logo-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.logo-btn{width:44px;height:44px;border-radius:10px;font-size:22px;border:2px solid var(--border);background:var(--bg3);transition:all .2s}
+.logo-btn.sel{border-color:var(--blue);background:var(--blue-bg)}
+.color-swatch{width:34px;height:34px;border-radius:8px;border:3px solid transparent;transition:all .2s;flex-shrink:0}
+.color-swatch.sel{border-color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.3)}
+
+/* ── Toast ── */
+#toast{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--green);color:#fff;border-radius:20px;padding:10px 20px;font-size:13px;font-weight:700;z-index:999;transition:transform .3s;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.4);pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── Modals ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:150;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-sheet{background:var(--bg2);border-radius:22px 22px 0 0;padding:20px 16px max(28px,env(safe-area-inset-bottom));width:100%;max-width:480px;max-height:88vh;overflow-y:auto}
+.modal-sheet::-webkit-scrollbar{width:3px}
+
+/* ── Period pills ── */
+.period-pills{display:flex;gap:6px;margin-bottom:14px}
+.period-pill{flex:1;padding:8px 4px;border-radius:var(--radius-xs);border:1.5px solid var(--border);background:var(--bg3);color:var(--muted);font-size:11px;font-weight:600;text-transform:capitalize;transition:all .2s}
+.period-pill.active{background:var(--blue-bg);border-color:var(--blue);color:#fff}
+
+/* ── User list ── */
+.user-row{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.user-avatar-sm{width:42px;height:42px;border-radius:11px;background:var(--bg);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+
+/* ── Transitions ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.fadein{animation:fadeUp .25s ease both}
+
+/* ── Change warning banner ── */
+.change-banner{background:var(--red-bg);border:1px solid var(--red);border-radius:var(--radius-xs);padding:8px 12px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#f87192}
+.change-ok-banner{background:var(--green-bg);border:1px solid var(--green);border-radius:var(--radius-xs);padding:8px 12px;margin-top:10px;display:flex;justify-content:space-between;font-size:12px;color:var(--green)}
+
+/* ── Pax counter ── */
+.pax-ctrl{display:flex;align-items:center;gap:10px;background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px}
+.pax-btn{width:32px;height:32px;border-radius:8px;font-size:20px;line-height:1;font-weight:700;border:none;display:flex;align-items:center;justify-content:center}
+.pax-val{flex:1;text-align:center;font-size:20px;font-weight:800}
+
+/* ── Goods type pills ── */
+.goods-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.goods-pill{padding:5px 13px;border-radius:20px;border:1.5px solid var(--border);background:var(--bg3);font-size:12px;font-weight:600;transition:all .2s}
+.goods-pill.sel{background:var(--blue2);border-color:var(--blue2);color:#fff}
+
+/* ── Realtime badge ── */
+.realtime-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(22,199,106,.12);border:1px solid rgba(22,199,106,.3);border-radius:20px;padding:3px 10px;font-size:10px;font-weight:700;color:var(--green)}
+/* ── Firebase Sync Bar ── */
+#sync-bar{position:fixed;bottom:62px;left:50%;transform:translateX(-50%);z-index:80;display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:11px;font-weight:600;pointer-events:none;opacity:0;transition:opacity .4s;white-space:nowrap;max-width:92%}
+#sync-bar.show{opacity:1}
+.sdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sdot.online{background:var(--green);animation:livepulse 2s infinite}
+.sdot.syncing{background:var(--amber);animation:blink .6s infinite}
+.sdot.offline{background:var(--muted)}
+.sdot.error{background:var(--red)}
+/* ── FB setup ── */
+.fb-step{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px}
+.fb-num{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--blue2);color:#fff;font-size:11px;font-weight:800;align-items:center;justify-content:center;margin-right:6px;vertical-align:middle}
+.fb-code{background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px;font-size:10px;font-family:var(--mono);color:var(--muted);word-break:break-all;margin-top:6px;line-height:1.6;user-select:all}
+.fb-ok{background:var(--green-bg);border:1px solid var(--green);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--green);margin-bottom:10px}
+.fb-off{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:10px}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="root">
+
+<!-- ════════════════════════════════════════
+     SETUP WIZARD SCREEN
+═════════════════════════════════════════ -->
+<div id="screen-setup" class="screen active">
+  <div class="setup-screen" style="overflow-y:auto;width:100%;max-width:480px;margin:0 auto">
+    <div class="setup-step-dots">
+      <div class="step-dot" id="dot-0" style="width:24px;background:var(--blue)"></div>
+      <div class="step-dot" id="dot-1" style="width:8px"></div>
+    </div>
+    <!-- Step 0: Company -->
+    <div id="setup-step-0" style="width:100%">
+      <div style="text-align:center;margin-bottom:28px">
+        <div id="setup-logo-preview" style="width:80px;height:80px;border-radius:20px;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 12px">🚌</div>
+        <div style="font-size:24px;font-weight:800;letter-spacing:-.5px">Welcome to TapTicket</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px">Set up your bus company in 2 steps</div>
+      </div>
+      <span class="label">Company Logo</span>
+      <div class="logo-grid" id="logo-grid">
+        <button class="logo-btn sel" onclick="selectLogo(this,'🚌')">🚌</button>
+        <button class="logo-btn" onclick="selectLogo(this,'🚐')">🚐</button>
+        <button class="logo-btn" onclick="selectLogo(this,'🏢')">🏢</button>
+        <button class="logo-btn" onclick="selectLogo(this,'⭐')">⭐</button>
+        <button class="logo-btn" onclick="selectLogo(this,'🦁')">🦁</button>
+        <button class="logo-btn" onclick="selectLogo(this,'🦅')">🦅</button>
+        <button class="logo-btn" onclick="selectLogo(this,'🌟')">🌟</button>
+        <button class="logo-btn" onclick="selectLogo(this,'💎')">💎</button>
+      </div>
+      <span class="label">Brand Color</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px" id="color-grid">
+        <button class="color-swatch sel" style="background:#2563eb" onclick="selectColor(this,'#2563eb')"></button>
+        <button class="color-swatch" style="background:#16a34a" onclick="selectColor(this,'#16a34a')"></button>
+        <button class="color-swatch" style="background:#f59e0b" onclick="selectColor(this,'#f59e0b')"></button>
+        <button class="color-swatch" style="background:#ef4444" onclick="selectColor(this,'#ef4444')"></button>
+        <button class="color-swatch" style="background:#8b5cf6" onclick="selectColor(this,'#8b5cf6')"></button>
+        <button class="color-swatch" style="background:#ec4899" onclick="selectColor(this,'#ec4899')"></button>
+        <button class="color-swatch" style="background:#0891b2" onclick="selectColor(this,'#0891b2')"></button>
+        <button class="color-swatch" style="background:#dc2626" onclick="selectColor(this,'#dc2626')"></button>
+      </div>
+      <span class="label">Company Name *</span>
+      <input class="inp" id="setup-company-name" placeholder="e.g. Grasshopper Coaches"/>
+      <span class="label">Bus / Vehicle Registration</span>
+      <input class="inp" id="setup-bus-reg" placeholder="e.g. AAA 1234"/>
+      <span class="label">Company Reg. Number</span>
+      <input class="inp" id="setup-reg-num" placeholder="e.g. BP 1234ZW"/>
+      <span class="label">Phone / EcoCash Number</span>
+      <input class="inp" id="setup-phone" placeholder="0771 234 567"/>
+      <span class="label">Address / Rank</span>
+      <input class="inp" id="setup-address" placeholder="e.g. Mbare Musika, Harare"/>
+      <button class="btn-primary" style="margin-top:20px" onclick="setupNext()">Continue →</button>
+    </div>
+
+    <!-- Step 1: Admin account -->
+    <div id="setup-step-1" style="width:100%;display:none">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:24px;font-weight:800">Create Admin Account</div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px">You can add more users later</div>
+      </div>
+      <span class="label">Your Avatar</span>
+      <div class="logo-grid" id="avatar-grid">
+        <button class="logo-btn sel" onclick="selectAvatar(this,'👤')">👤</button>
+        <button class="logo-btn" onclick="selectAvatar(this,'👨')">👨</button>
+        <button class="logo-btn" onclick="selectAvatar(this,'👩')">👩</button>
+        <button class="logo-btn" onclick="selectAvatar(this,'🧑‍💼')">🧑‍💼</button>
+        <button class="logo-btn" onclick="selectAvatar(this,'👨‍✈️')">👨‍✈️</button>
+        <button class="logo-btn" onclick="selectAvatar(this,'👩‍✈️')">👩‍✈️</button>
+        <button class="logo-btn" onclick="selectAvatar(this,'👮')">👮</button>
+        <button class="logo-btn" onclick="selectAvatar(this,'🦺')">🦺</button>
+      </div>
+      <span class="label">Your Name *</span>
+      <input class="inp" id="setup-admin-name" placeholder="Full name"/>
+      <span class="label">Set 4-Digit PIN</span>
+      <input class="inp" id="setup-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••"/>
+      <span class="label">Confirm PIN</span>
+      <input class="inp" id="setup-pin2" type="password" inputmode="numeric" maxlength="4" placeholder="••••"/>
+      <div id="setup-err" style="color:var(--red);font-size:12px;margin-top:6px;display:none"></div>
+      <button class="btn-primary btn-green" style="margin-top:20px" onclick="setupFinish()">🚀 Start Using TapTicket</button>
+      <button class="btn-secondary" style="margin-top:8px" onclick="setupBack()">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     LOGIN SCREEN
+═════════════════════════════════════════ -->
+<div id="screen-login" class="screen" style="background:var(--bg);justify-content:center;align-items:center;padding:24px">
+  <div style="text-align:center;width:100%;max-width:360px">
+    <div id="login-company-badge" style="width:70px;height:70px;border-radius:18px;background:var(--blue2);display:flex;align-items:center;justify-content:center;font-size:38px;margin:0 auto 10px">🚌</div>
+    <div id="login-company-name" style="font-size:22px;font-weight:800;letter-spacing:-.5px">TapTicket</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:24px" id="login-sub">Sign in to continue</div>
+
+    <div class="user-selector" id="user-selector"></div>
+
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div id="pin-error" style="color:var(--red);font-size:12px;min-height:18px;margin-bottom:4px"></div>
+
+    <div class="pinpad" id="pinpad">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <div class="pin-key empty"></div>
+      <button class="pin-key" onclick="pinPress('0')">0</button>
+      <button class="pin-key" onclick="pinDel()" style="font-size:18px">⌫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MAIN APP SCREEN
+═════════════════════════════════════════ -->
+<div id="screen-app" class="screen">
+  <!-- Header -->
+  <div class="app-header">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="hdr-logo" style="width:36px;height:36px;border-radius:9px;background:var(--blue2);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0">🚌</div>
+        <div>
+          <div id="hdr-company" style="font-size:14px;font-weight:800;line-height:1.1">TapTicket</div>
+          <div id="hdr-busreg" style="font-size:10px;color:var(--muted)"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <button onclick="showReport()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text);padding:6px 9px;font-size:13px">📊</button>
+        <div style="text-align:right">
+          <div id="hdr-user" style="font-size:10px;color:var(--muted)">👤 User</div>
+          <div id="hdr-today" style="font-size:11px;font-weight:700"><span style="color:var(--green)">$0.00</span> <span style="color:var(--red)">$0.00</span></div>
+        </div>
+        <button onclick="doSignOut()" title="Sign out" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--muted);width:30px;height:30px;font-size:13px">⇥</button>
+      </div>
+    </div>
+    <div id="change-alert" style="display:none;background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:7px 12px;margin-top:10px;display:none;justify-content:space-between;align-items:center;font-size:12px;color:#f87192">
+      <span id="change-alert-text">⚠ Change owed</span>
+      <span id="change-alert-amount" style="font-weight:700"></span>
+    </div>
+  </div>
+
+  <!-- Tab content -->
+  <div class="scrollable" id="tab-content"></div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="nav-issue" onclick="switchTab('issue')"><span class="nav-icon">🎟</span>Issue</button>
+    <button class="nav-btn" id="nav-history" onclick="switchTab('history')"><span class="nav-icon">📋</span>History</button>
+    <button class="nav-btn" id="nav-pay" onclick="switchTab('pay')"><span class="nav-icon">💸</span>Pay Out</button>
+    <button class="nav-btn" id="nav-check" onclick="switchTab('check')"><span class="nav-icon">✅</span>Checker</button>
+    <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')"><span class="nav-icon">⚙️</span>Settings</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     MODALS
+═════════════════════════════════════════ -->
+<!-- Share modal -->
+<div class="modal-overlay" id="share-modal">
+  <div class="modal-sheet">
+    <div style="font-weight:700;font-size:16px;margin-bottom:14px">Share Ticket</div>
+    <div class="card-inset" style="margin-bottom:14px;max-height:180px;overflow-y:auto">
+      <pre id="share-text" style="color:var(--muted);font-size:11px;white-space:pre-wrap;font-family:var(--mono)"></pre>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <button class="btn-secondary" onclick="shareWhatsApp()" style="padding:12px 6px;font-size:12px">📱 WhatsApp</button>
+      <button class="btn-secondary" onclick="shareSMS()" style="padding:12px 6px;font-size:12px">💬 SMS</button>
+      <button class="btn-secondary" onclick="shareCopy()" style="padding:12px 6px;font-size:12px">📋 Copy</button>
+    </div>
+    <button class="btn-secondary" onclick="closeModal('share-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Report modal -->
+<div class="modal-overlay" id="report-modal">
+  <div class="modal-sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-weight:800;font-size:17px">📊 Reports</div>
+      <button onclick="closeModal('report-modal')" style="background:var(--bg3);border:none;color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:16px">✕</button>
+    </div>
+    <div class="period-pills">
+      <button class="period-pill active" id="pp-daily" onclick="setPeriod('daily')">Daily</button>
+      <button class="period-pill" id="pp-weekly" onclick="setPeriod('weekly')">Weekly</button>
+      <button class="period-pill" id="pp-monthly" onclick="setPeriod('monthly')">Monthly</button>
+      <button class="period-pill" id="pp-all" onclick="setPeriod('all')">All Time</button>
+    </div>
+    <div id="report-stats" class="bo-grid-3" style="margin-bottom:14px"></div>
+    <div id="report-summary-cards" style="margin-bottom:14px"></div>
+    <div class="card-inset" style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Report Preview</div>
+      <pre id="report-text-preview" style="color:var(--muted);font-size:10px;white-space:pre-wrap;font-family:var(--mono);max-height:180px;overflow-y:auto"></pre>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <button class="btn-secondary" onclick="reportWhatsApp()" style="padding:12px 6px;font-size:12px">📱 WhatsApp</button>
+      <button class="btn-secondary" onclick="reportSMS()" style="padding:12px 6px;font-size:12px">💬 SMS</button>
+      <button class="btn-secondary" onclick="reportCopy()" style="padding:12px 6px;font-size:12px">📋 Copy</button>
+    </div>
+    <button class="btn-secondary" onclick="closeModal('report-modal')">Close</button>
+  </div>
+</div>
+
+<!-- Company Settings modal -->
+<div class="modal-overlay" id="company-modal">
+  <div class="modal-sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-weight:800;font-size:17px">🏢 Company Details</div>
+      <button onclick="closeModal('company-modal')" style="background:var(--bg3);border:none;color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:16px">✕</button>
+    </div>
+    <div id="co-preview" style="display:flex;align-items:center;gap:12px;background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px">
+      <div id="co-prev-badge" style="width:44px;height:44px;border-radius:11px;background:#2563eb;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">🚌</div>
+      <div><div id="co-prev-name" style="font-weight:700">Your Company</div><div id="co-prev-reg" style="font-size:11px;color:var(--muted)">Registration</div></div>
+    </div>
+    <span class="label">Logo</span>
+    <div class="logo-grid" id="co-logo-grid">
+      <button class="logo-btn sel" onclick="coSelectLogo(this,'🚌')">🚌</button>
+      <button class="logo-btn" onclick="coSelectLogo(this,'🚐')">🚐</button>
+      <button class="logo-btn" onclick="coSelectLogo(this,'🏢')">🏢</button>
+      <button class="logo-btn" onclick="coSelectLogo(this,'⭐')">⭐</button>
+      <button class="logo-btn" onclick="coSelectLogo(this,'🦁')">🦁</button>
+      <button class="logo-btn" onclick="coSelectLogo(this,'🦅')">🦅</button>
+      <button class="logo-btn" onclick="coSelectLogo(this,'🌟')">🌟</button>
+      <button class="logo-btn" onclick="coSelectLogo(this,'💎')">💎</button>
+    </div>
+    <span class="label">Brand Color</span>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px" id="co-color-grid">
+      <button class="color-swatch sel" style="background:#2563eb" onclick="coSelectColor(this,'#2563eb')"></button>
+      <button class="color-swatch" style="background:#16a34a" onclick="coSelectColor(this,'#16a34a')"></button>
+      <button class="color-swatch" style="background:#f59e0b" onclick="coSelectColor(this,'#f59e0b')"></button>
+      <button class="color-swatch" style="background:#ef4444" onclick="coSelectColor(this,'#ef4444')"></button>
+      <button class="color-swatch" style="background:#8b5cf6" onclick="coSelectColor(this,'#8b5cf6')"></button>
+      <button class="color-swatch" style="background:#ec4899" onclick="coSelectColor(this,'#ec4899')"></button>
+      <button class="color-swatch" style="background:#0891b2" onclick="coSelectColor(this,'#0891b2')"></button>
+      <button class="color-swatch" style="background:#dc2626" onclick="coSelectColor(this,'#dc2626')"></button>
+    </div>
+    <span class="label">Company Name *</span><input class="inp" id="co-name" placeholder="Company name"/>
+    <span class="label">Bus / Vehicle Reg</span><input class="inp" id="co-bus-reg" placeholder="e.g. AAA 1234"/>
+    <span class="label">Company Reg. #</span><input class="inp" id="co-reg-num" placeholder="e.g. BP 1234ZW"/>
+    <span class="label">Operator License #</span><input class="inp" id="co-license" placeholder="e.g. OL/ZW/2024/001"/>
+    <span class="label">Phone / EcoCash</span><input class="inp" id="co-phone" placeholder="0771 234 567"/>
+    <span class="label">Address / Rank</span><input class="inp" id="co-address" placeholder="e.g. Mbare Musika, Harare"/>
+    <span class="label">Back Office PIN (owner access)</span>
+    <input class="inp" id="co-bo-pin" type="password" inputmode="numeric" maxlength="4" placeholder="4-digit PIN for back office"/>
+    <button class="btn-primary" style="margin-top:18px" onclick="saveCompany()">💾 Save Details</button>
+    <button class="btn-secondary" style="margin-top:8px" onclick="closeModal('company-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- User edit modal -->
+<div class="modal-overlay" id="user-modal">
+  <div class="modal-sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div id="user-modal-title" style="font-weight:800;font-size:17px">Add User</div>
+      <button onclick="closeModal('user-modal')" style="background:var(--bg3);border:none;color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:16px">✕</button>
+    </div>
+    <span class="label">Avatar</span>
+    <div class="logo-grid" id="user-avatar-grid">
+      <button class="logo-btn sel" onclick="userSelectAvatar(this,'👤')">👤</button>
+      <button class="logo-btn" onclick="userSelectAvatar(this,'👨')">👨</button>
+      <button class="logo-btn" onclick="userSelectAvatar(this,'👩')">👩</button>
+      <button class="logo-btn" onclick="userSelectAvatar(this,'🧑‍💼')">🧑‍💼</button>
+      <button class="logo-btn" onclick="userSelectAvatar(this,'👨‍✈️')">👨‍✈️</button>
+      <button class="logo-btn" onclick="userSelectAvatar(this,'👩‍✈️')">👩‍✈️</button>
+      <button class="logo-btn" onclick="userSelectAvatar(this,'👮')">👮</button>
+      <button class="logo-btn" onclick="userSelectAvatar(this,'🦺')">🦺</button>
+    </div>
+    <span class="label">Name *</span><input class="inp" id="user-name-inp" placeholder="Full name"/>
+    <span class="label">Role</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:4px" id="user-role-grid">
+      <button class="seg-btn active" onclick="userSelectRole(this,'conductor')" style="border-radius:8px;border:1.5px solid var(--border)">Conductor</button>
+      <button class="seg-btn" onclick="userSelectRole(this,'driver')" style="border-radius:8px;border:1.5px solid var(--border)">Driver</button>
+      <button class="seg-btn" onclick="userSelectRole(this,'checker')" style="border-radius:8px;border:1.5px solid var(--border)">Checker</button>
+      <button class="seg-btn" onclick="userSelectRole(this,'admin')" style="border-radius:8px;border:1.5px solid var(--border)">Admin</button>
+    </div>
+    <span class="label" id="user-pin-label">Set 4-Digit PIN *</span>
+    <input class="inp" id="user-pin-inp" type="password" inputmode="numeric" maxlength="4" placeholder="••••"/>
+    <span class="label" id="user-pin2-label">Confirm PIN *</span>
+    <input class="inp" id="user-pin2-inp" type="password" inputmode="numeric" maxlength="4" placeholder="••••"/>
+    <div id="user-modal-err" style="color:var(--red);font-size:12px;margin-top:6px;display:none"></div>
+    <button class="btn-primary" style="margin-top:16px" onclick="saveUser()">Save User</button>
+    <button class="btn-secondary" style="margin-top:8px" onclick="closeModal('user-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Back office PIN modal -->
+<div class="modal-overlay" id="bo-pin-modal">
+  <div class="modal-sheet" style="text-align:center">
+    <div style="font-size:30px;margin-bottom:8px">🔐</div>
+    <div style="font-weight:800;font-size:18px;margin-bottom:4px">Back Office Access</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:20px">Enter the owner PIN to view live data</div>
+    <div class="pin-dots" id="bo-pin-dots">
+      <div class="pin-dot" id="bopd0"></div>
+      <div class="pin-dot" id="bopd1"></div>
+      <div class="pin-dot" id="bopd2"></div>
+      <div class="pin-dot" id="bopd3"></div>
+    </div>
+    <div id="bo-pin-error" style="color:var(--red);font-size:12px;min-height:18px;margin-bottom:4px"></div>
+    <div class="pinpad">
+      <button class="pin-key" onclick="boPinPress('1')">1</button>
+      <button class="pin-key" onclick="boPinPress('2')">2</button>
+      <button class="pin-key" onclick="boPinPress('3')">3</button>
+      <button class="pin-key" onclick="boPinPress('4')">4</button>
+      <button class="pin-key" onclick="boPinPress('5')">5</button>
+      <button class="pin-key" onclick="boPinPress('6')">6</button>
+      <button class="pin-key" onclick="boPinPress('7')">7</button>
+      <button class="pin-key" onclick="boPinPress('8')">8</button>
+      <button class="pin-key" onclick="boPinPress('9')">9</button>
+      <div class="pin-key empty"></div>
+      <button class="pin-key" onclick="boPinPress('0')">0</button>
+      <button class="pin-key" onclick="boPinDel()" style="font-size:18px">⌫</button>
+    </div>
+    <button class="btn-secondary" style="margin-top:14px;max-width:260px;margin-left:auto;margin-right:auto;display:block" onclick="closeModal('bo-pin-modal')">Cancel</button>
+  </div>
+</div>
+
+</div><!-- #root -->
+
+<!-- Sync status bar (shown above bottom nav) -->
+<div id="sync-bar"><span class="sdot offline" id="sdot"></span><span id="sync-msg">Offline mode</span></div>
+
+<!-- Firebase Status Modal — config is pre-configured, just shows status -->
+<div class="modal-overlay" id="fb-modal">
+  <div class="modal-sheet" style="max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-weight:800;font-size:17px">🔥 Cloud Sync</div>
+      <button onclick="closeModal('fb-modal')" style="background:var(--bg3);border:none;color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:16px">✕</button>
+    </div>
+
+    <!-- Live status card -->
+    <div id="fb-status-card" class="fb-off" style="margin-bottom:16px;border-radius:var(--radius);padding:16px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:32px" id="fb-status-icon">⏳</span>
+        <div>
+          <div style="font-weight:800;font-size:15px" id="fb-status-title">Connecting…</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px" id="fb-status-sub">tapticket-f4d49 · Firebase Realtime DB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project info -->
+    <div class="card-inset" style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:8px;letter-spacing:.6px">Firebase Project</div>
+      <div style="display:grid;gap:6px">
+        ${[
+          ['Project ID','tapticket-f4d49'],
+          ['Database','tapticket-f4d49-default-rtdb'],
+          ['Region','us-central1'],
+          ['Plan','Spark (Free)'],
+        ].map(([k,v])=>`
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="color:var(--muted)">${k}</span>
+          <span style="font-family:var(--mono);font-weight:600">${v}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Data scope info -->
+    <div class="card-inset" style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:8px;letter-spacing:.6px">Data Isolation</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7">
+        Each bus company gets its own <strong style="color:var(--text)">private data silo</strong> — derived from the company name set in Settings. Multiple companies can share this Firebase project without seeing each other's data.<br/><br/>
+        <strong style="color:var(--text)">Your company path:</strong><br/>
+        <span id="fb-company-path" style="font-family:var(--mono);font-size:11px;color:var(--green);background:var(--bg);padding:4px 8px;border-radius:5px;display:inline-block;margin-top:4px">loading…</span>
+      </div>
+    </div>
+
+    <!-- Multi-device instructions -->
+    <div class="card-inset" style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:8px;letter-spacing:.6px">Share with Owner / Other Devices</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        Any device that opens <strong style="color:var(--text)">the same TapTicket URL</strong> and sets <strong style="color:var(--text)">the same company name</strong> in Settings will automatically sync to the same data. No extra setup needed.<br/><br/>
+        📲 Share the app URL → Owner opens it → Goes to Settings → Sets exact same company name → Back Office shows live data.
+      </div>
+    </div>
+
+    <button class="btn-primary btn-green" onclick="FB.pushAllLocal();closeModal('fb-modal')">☁️ Push All Local Data Now</button>
+    <button class="btn-secondary" style="margin-top:8px" onclick="closeModal('fb-modal')">Close</button>
+    <button onclick="if(confirm('Reset cloud connection? Local data is kept.'))FB.disconnect();closeModal('fb-modal')" style="width:100%;margin-top:8px;padding:10px;background:none;border:none;color:var(--dim);font-size:11px;cursor:pointer">Reset connection</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  TAPTICKET — CORE APP LOGIC
+// ═══════════════════════════════════════════════════════
+
+// ── Constants ──
+const APP_SECRET = "TAPTICKET2025ZW";
+
+// ═══════════════════════════════════════════════════════
+//  FIREBASE SYNC ENGINE
+// ═══════════════════════════════════════════════════════
+const FB = {
+  app: null, db: null, companyId: null,
+  connected: false, online: false,
+  listeners: {},
+  _offlineQueue: [], // writes queued when offline
+
+  // Load saved config
+  loadConfig() {
+    try { return JSON.parse(localStorage.getItem('tt_fb_config')) || null; } catch { return null; }
+  },
+  saveConfig(cfg) {
+    localStorage.setItem('tt_fb_config', JSON.stringify(cfg));
+  },
+  clearConfig() {
+    localStorage.removeItem('tt_fb_config');
+  },
+
+  // Derive a safe Firebase key from company name
+  makeCompanyId(name) {
+    return name.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30) + '_' +
+      Math.abs([...name].reduce((h,c)=>(h*31+c.charCodeAt(0))|0,0)).toString(36).slice(0,6);
+  },
+
+  // Initialise Firebase with config
+  init(cfg) {
+    try {
+      // Tear down existing app if any
+      if (this.app) {
+        try { this.app.delete(); } catch(e){}
+        this.app = null; this.db = null;
+        Object.values(this.listeners).forEach(off => { try{off()}catch(e){} });
+        this.listeners = {};
+      }
+
+      this.app = firebase.initializeApp({
+        apiKey: cfg.apiKey,
+        databaseURL: cfg.databaseURL,
+        projectId: cfg.projectId,
+        appId: cfg.appId,
+      }, 'tapticket-' + Date.now());
+
+      this.db = firebase.database(this.app);
+      this.companyId = cfg.companyId;
+      this.connected = true;
+
+      // Monitor connection state
+      this.db.ref('.info/connected').on('value', snap => {
+        const wasOnline = this.online;
+        this.online = !!snap.val();
+        if (this.online && !wasOnline) {
+          updateSyncBar('online', 'Cloud connected ✓');
+          if (!wasOnline) toast('☁️ Synced to Firebase!');
+          setTimeout(() => updateSyncBar('online', 'Synced'), 2500);
+          this._flushQueue();
+        } else if (!this.online) {
+          updateSyncBar('offline', 'Offline — queuing writes');
+        }
+      });
+
+      // Start listeners
+      this._listenTickets();
+      this._listenPayments();
+      this._listenCompany();
+      this._listenUsers();
+
+      return true;
+    } catch(e) {
+      console.error('Firebase init error:', e);
+      this.connected = false;
+      return false;
+    }
+  },
+
+  // ── Reference helpers ──
+  ref(path) { return this.db.ref(`${this.companyId}/${path}`); },
+
+  // ── Write helpers (with offline queue) ──
+  async write(path, data) {
+    if (!this.connected) return;
+    if (!this.online) {
+      this._offlineQueue.push({ path, data, op: 'set' });
+      updateSyncBar('syncing', `${this._offlineQueue.length} pending…`);
+      return;
+    }
+    updateSyncBar('syncing', 'Saving…');
+    try {
+      await this.ref(path).set(data);
+      updateSyncBar('online', 'Saved ✓');
+      setTimeout(() => updateSyncBar('online', 'Synced'), 1500);
+    } catch(e) {
+      console.error('FB write error:', e);
+      updateSyncBar('error', 'Sync error');
+    }
+  },
+
+  async push(path, data) {
+    if (!this.connected) return;
+    if (!this.online) {
+      this._offlineQueue.push({ path, data, op: 'push' });
+      updateSyncBar('syncing', `${this._offlineQueue.length} pending…`);
+      return;
+    }
+    updateSyncBar('syncing', 'Saving…');
+    try {
+      await this.ref(path).child(data.id).set(data);
+      updateSyncBar('online', 'Saved ✓');
+      setTimeout(() => updateSyncBar('online', 'Synced'), 1500);
+    } catch(e) {
+      console.error('FB push error:', e);
+      updateSyncBar('error', 'Sync error');
+    }
+  },
+
+  async _flushQueue() {
+    if (!this._offlineQueue.length) return;
+    updateSyncBar('syncing', `Syncing ${this._offlineQueue.length} items…`);
+    const q = [...this._offlineQueue];
+    this._offlineQueue = [];
+    for (const item of q) {
+      try {
+        if (item.op === 'set') await this.ref(item.path).set(item.data);
+        else await this.ref(item.path).child(item.data.id).set(item.data);
+      } catch(e) { this._offlineQueue.push(item); }
+    }
+    if (this._offlineQueue.length === 0) {
+      updateSyncBar('online', 'All synced ✓');
+      setTimeout(() => updateSyncBar('online', 'Synced'), 2000);
+    }
+  },
+
+  // ── Listeners (remote → local state) ──
+  _listenTickets() {
+    if (this.listeners.tickets) { this.listeners.tickets(); delete this.listeners.tickets; }
+    const ref = this.ref('tickets');
+    const handler = ref.on('value', snap => {
+      const val = snap.val();
+      if (!val) return;
+      const remote = Object.values(val);
+      // Merge: remote wins for same id, local wins for new local items
+      const merged = Object.fromEntries([...S.tickets, ...remote].map(t => [t.id, t]));
+      S.tickets = Object.values(merged).sort((a,b) => b.ts - a.ts);
+      sv('tt_tickets', S.tickets);
+      updateHeaderStats(); updateChangeAlert();
+      if (S.currentTab === 'history' || S.currentTab === 'issue') renderTab(S.currentTab);
+      if (S.currentTab === 'backoffice') renderBackOffice();
+    });
+    this.listeners.tickets = () => ref.off('value', handler);
+  },
+
+  _listenPayments() {
+    if (this.listeners.payments) { this.listeners.payments(); delete this.listeners.payments; }
+    const ref = this.ref('payments');
+    const handler = ref.on('value', snap => {
+      const val = snap.val();
+      if (!val) return;
+      const remote = Object.values(val);
+      const merged = Object.fromEntries([...S.payments, ...remote].map(p => [p.id, p]));
+      S.payments = Object.values(merged).sort((a,b) => b.ts - a.ts);
+      sv('tt_payments', S.payments);
+      updateHeaderStats();
+      if (S.currentTab === 'pay') renderTab('pay');
+      if (S.currentTab === 'backoffice') renderBackOffice();
+    });
+    this.listeners.payments = () => ref.off('value', handler);
+  },
+
+  _listenCompany() {
+    if (this.listeners.company) { this.listeners.company(); delete this.listeners.company; }
+    const ref = this.ref('company');
+    const handler = ref.on('value', snap => {
+      const val = snap.val();
+      if (!val) return;
+      S.company = { ...val };
+      sv('tt_company', S.company);
+      updateHeader();
+    });
+    this.listeners.company = () => ref.off('value', handler);
+  },
+
+  _listenUsers() {
+    if (this.listeners.users) { this.listeners.users(); delete this.listeners.users; }
+    const ref = this.ref('users');
+    const handler = ref.on('value', snap => {
+      const val = snap.val();
+      if (!val) return;
+      const remote = Object.values(val);
+      // Merge preserving local users
+      const merged = Object.fromEntries([...S.users, ...remote].map(u => [u.id, u]));
+      S.users = Object.values(merged);
+      sv('tt_users', S.users);
+    });
+    this.listeners.users = () => ref.off('value', handler);
+  },
+
+  // ── Sync all local data up to Firebase ──
+  async pushAllLocal() {
+    if (!this.connected || !this.online) return;
+    updateSyncBar('syncing', 'Uploading all data…');
+    try {
+      const ticketObj = Object.fromEntries(S.tickets.map(t => [t.id, t]));
+      const payObj = Object.fromEntries(S.payments.map(p => [p.id, p]));
+      await this.ref('tickets').set(ticketObj);
+      await this.ref('payments').set(payObj);
+      if (S.company) await this.ref('company').set(S.company);
+      const userObj = Object.fromEntries(S.users.map(u => [u.id, u]));
+      await this.ref('users').set(userObj);
+      updateSyncBar('online', 'All data uploaded ✓');
+      setTimeout(() => updateSyncBar('online', 'Synced'), 2000);
+      toast('☁️ All data synced to cloud!');
+    } catch(e) {
+      updateSyncBar('error', 'Upload failed');
+      toast('Sync failed — check connection', '#f04060');
+    }
+  },
+
+  // disconnect cleanly
+  disconnect() {
+    Object.values(this.listeners).forEach(off => { try{off()}catch(e){} });
+    this.listeners = {};
+    try { if(this.app) this.app.delete(); } catch(e){}
+    this.app = null; this.db = null;
+    this.connected = false; this.online = false;
+    this.companyId = null;
+    this.clearConfig();
+    updateSyncBar('offline', 'Disconnected');
+    setTimeout(()=>hideSyncBar(),3000);
+  }
+};
+
+// ── Sync bar UI ──
+function updateSyncBar(state, msg) {
+  const bar = document.getElementById('sync-bar');
+  const dot = document.getElementById('sdot');
+  const msgEl = document.getElementById('sync-msg');
+  if (!bar) return;
+  bar.classList.add('show');
+  dot.className = `sdot ${state}`;
+  msgEl.textContent = msg;
+  // Auto-hide when synced and not on back office
+  if (state === 'online' && msg === 'Synced') {
+    setTimeout(() => { if (S.currentTab !== 'backoffice') bar.classList.remove('show'); }, 3000);
+  }
+}
+function hideSyncBar() {
+  document.getElementById('sync-bar')?.classList.remove('show');
+}
+
+// ── Firebase modal — shows live status (config is pre-wired) ──
+function openFbModal() {
+  const card = document.getElementById('fb-status-card');
+  const icon = document.getElementById('fb-status-icon');
+  const title = document.getElementById('fb-status-title');
+  const sub = document.getElementById('fb-status-sub');
+  const pathEl = document.getElementById('fb-company-path');
+
+  if (FB.connected && FB.online) {
+    card.style.background = 'var(--green-bg)';
+    card.style.border = '1.5px solid var(--green)';
+    icon.textContent = '✅';
+    title.textContent = 'Connected & Syncing Live';
+    title.style.color = 'var(--green)';
+    sub.textContent = 'tapticket-f4d49 · All devices in sync';
+  } else if (FB.connected && !FB.online) {
+    card.style.background = 'var(--amber-bg)';
+    card.style.border = '1.5px solid var(--amber)';
+    icon.textContent = '📶';
+    title.textContent = 'Connected — Offline';
+    title.style.color = 'var(--amber)';
+    sub.textContent = 'Writes queued, will sync when online';
+  } else {
+    card.style.background = 'var(--red-bg)';
+    card.style.border = '1.5px solid var(--red)';
+    icon.textContent = '⚠️';
+    title.textContent = 'Not Connected';
+    title.style.color = 'var(--red)';
+    sub.textContent = 'Tap "Push All" or check internet connection';
+  }
+
+  // Show the data path for this company
+  const cfg = FB.loadConfig();
+  if (pathEl) {
+    const cid = cfg?.companyId || (S.company ? FB.makeCompanyId(S.company.name) : 'default_company');
+    pathEl.textContent = `/${cid}/tickets, /payments…`;
+  }
+
+  openModal('fb-modal');
+}
+
+function connectFirebase() { /* no-op — config is hardcoded, auto-connects on boot */ }
+function disconnectFirebase() {
+  if (confirm('Reset cloud connection? Local data is kept.')) {
+    FB.disconnect();
+    toast('Cloud sync reset', '#f5a623');
+  }
+}
+
+// ── Auto-connect on load — uses hardcoded project config ──
+function tryAutoConnect() {
+  // Always use the baked-in Firebase project; companyId is derived from company name
+  // so each bus company gets its own data silo within the same Firebase project.
+  const baked = window.TAPTICKET_FB_CONFIG;
+  if (!baked) return;
+
+  // Determine companyId: use saved one if available, otherwise derive from company name
+  const saved = FB.loadConfig();
+  const companyId = saved?.companyId ||
+    (S.company ? FB.makeCompanyId(S.company.name) : 'default_company');
+
+  const cfg = { ...baked, companyId };
+  FB.saveConfig(cfg);  // persist so it survives page refresh
+
+  updateSyncBar('syncing', 'Connecting to cloud…');
+  FB.init(cfg);
+}
+
+// ── Patched write functions that sync to Firebase ──
+// These wrap sv() calls so Firebase gets every write automatically
+
+function syncTicket(ticket) {
+  sv('tt_tickets', S.tickets);
+  if (FB.connected) FB.push('tickets', ticket);
+}
+
+function syncPayment(payment) {
+  sv('tt_payments', S.payments);
+  if (FB.connected) FB.push('payments', payment);
+}
+
+function syncCompany(company) {
+  sv('tt_company', company);
+  if (FB.connected) FB.write('company', company);
+}
+
+function syncUsers(users) {
+  sv('tt_users', users);
+  if (FB.connected) {
+    const obj = Object.fromEntries(users.map(u => [u.id, u]));
+    FB.write('users', obj);
+  }
+}
+
+function syncTicketUpdate(id, changes) {
+  S.tickets = S.tickets.map(t => t.id === id ? {...t, ...changes} : t);
+  sv('tt_tickets', S.tickets);
+  if (FB.connected) {
+    const t = S.tickets.find(t => t.id === id);
+    if (t) FB.push('tickets', t);
+  }
+}
+
+const ROUTES_PRESET = [
+  {from:"Harare",to:"Bulawayo",fare:12},{from:"Harare",to:"Mutare",fare:8},
+  {from:"Harare",to:"Gweru",fare:6},{from:"Harare",to:"Masvingo",fare:7},
+  {from:"Bulawayo",to:"Victoria Falls",fare:10},{from:"Harare",to:"Bindura",fare:3},
+  {from:"Harare",to:"Chinhoyi",fare:4},{from:"Harare",to:"Marondera",fare:2.5},
+  {from:"Harare",to:"Kadoma",fare:5},{from:"Harare",to:"Kwekwe",fare:5.5},
+];
+const PAY_CATS = [
+  {id:"tout",label:"Tout / Conductor",icon:"👷",color:"#f59e0b"},
+  {id:"marshal",label:"Rank Marshal",icon:"🦺",color:"#3b82f6"},
+  {id:"police",label:"Police",icon:"👮",color:"#1d4ed8"},
+  {id:"food",label:"Food / Refreshment",icon:"🍱",color:"#10b981"},
+  {id:"tollgate",label:"Tollgate",icon:"🛣️",color:"#8b5cf6"},
+  {id:"fuel",label:"Fuel",icon:"⛽",color:"#ef4444"},
+  {id:"other",label:"Other Expense",icon:"💼",color:"#6b7280"},
+];
+const GOODS_TYPES = ["Parcel","Luggage","Livestock","Produce","Machinery","Electronics","Clothing","Other"];
+const ROLES = {admin:"Admin",conductor:"Conductor",checker:"Checker",driver:"Driver"};
+
+// ── State ──
+let S = {
+  company: null, users: [], tickets: [], payments: [],
+  currentUser: null, currentTab: "issue",
+  // issue form
+  ticketType:"passenger", selectedRoute:null,
+  customFrom:"",customTo:"",customFare:"",
+  pax:1, seatNo:"", payMethod:"Cash",
+  amountTendered:"",
+  goodsType:"Parcel", goodsWeight:"", goodsDesc:"",
+  // pay form
+  payCategory:null, payAmount:"", payNote:"", payOutMethod:"Cash",
+  // checker
+  checkInput:"",
+  // misc
+  pinEntry:"", loginUserId:"",
+  editingUserId:null,
+  setupLogo:"🚌", setupColor:"#2563eb", setupAvatar:"👤",
+  coLogo:"🚌", coColor:"#2563eb",
+  userAvatar:"👤", userRole:"conductor",
+  reportPeriod:"daily",
+  shareData:null,
+  boPinEntry:"", boUnlocked:false,
+};
+
+// ── Helpers ──
+function ld(k,fb){try{return JSON.parse(localStorage.getItem(k))??fb}catch{return fb}}
+function sv(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function fmt(n){return(+(n||0)).toFixed(2)}
+function genId(){return Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase()}
+function hashPin(pin){let h=5381;for(let i=0;i<pin.length;i++)h=((h<<5)+h+pin.charCodeAt(i))|0;return Math.abs(h).toString(36)}
+function signTicket(d){
+  const s=`${d.id}|${d.ticketType}|${d.amount}|${d.from}|${d.to}|${APP_SECRET}`;
+  let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;
+  return Math.abs(h).toString(36).toUpperCase().padStart(8,"0");
+}
+function verifyTicket(t){return signTicket(t)===t.sig}
+function makeQR(text){
+  const size=80,cells=8,cell=size/cells;
+  const hash=[...text].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,0);
+  let r=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="white"/>`;
+  for(let row=0;row<cells;row++)for(let col=0;col<cells;col++){
+    const s=Math.abs((hash*(row*17+col*31+7))|0)%3;
+    if(s===0||(row<3&&col<3)||(row<3&&col>cells-4)||(row>cells-4&&col<3))
+      r+=`<rect x="${col*cell}" y="${row*cell}" width="${cell}" height="${cell}" fill="black"/>`;
+  }
+  return `data:image/svg+xml;base64,${btoa(r+'</svg>')}`;
+}
+function relTime(ts){
+  const d=Date.now()-ts,m=60000,h=3600000;
+  if(d<m)return'just now';
+  if(d<h)return`${Math.floor(d/m)}m ago`;
+  if(d<h*24)return`${Math.floor(d/h)}h ago`;
+  return new Date(ts).toLocaleDateString('en-ZW');
+}
+
+// ── Toast ──
+function toast(msg,bg='#16c76a'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.style.background=bg;
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ── Screen management ──
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+// ── Boot ──
+function boot(){
+  S.company=ld('tt_company',null);
+  S.users=ld('tt_users',[]);
+  S.tickets=ld('tt_tickets',[]);
+  S.payments=ld('tt_payments',[]);
+
+  // Try to reconnect Firebase if previously configured
+  tryAutoConnect();
+
+  if(S.users.length===0){showScreen('setup');return}
+  showLoginScreen();
+}
+
+// ══════════════════════════════════
+//  SETUP WIZARD
+// ══════════════════════════════════
+function selectLogo(btn,logo){
+  document.querySelectorAll('#logo-grid .logo-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel'); S.setupLogo=logo;
+  const p=document.getElementById('setup-logo-preview');
+  p.textContent=logo;
+}
+function selectColor(btn,col){
+  document.querySelectorAll('#color-grid .color-swatch').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel'); S.setupColor=col;
+  document.getElementById('setup-logo-preview').style.background=col;
+}
+function selectAvatar(btn,av){
+  document.querySelectorAll('#avatar-grid .logo-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel'); S.setupAvatar=av;
+}
+function setupNext(){
+  const name=document.getElementById('setup-company-name').value.trim();
+  if(!name){toast('Enter company name','#f04060');return}
+  S.company={
+    name,logo:S.setupLogo,color:S.setupColor,
+    busReg:document.getElementById('setup-bus-reg').value.trim(),
+    regNumber:document.getElementById('setup-reg-num').value.trim(),
+    phone:document.getElementById('setup-phone').value.trim(),
+    address:document.getElementById('setup-address').value.trim(),
+    boPin:''
+  };
+  document.getElementById('setup-step-0').style.display='none';
+  document.getElementById('setup-step-1').style.display='block';
+  document.getElementById('dot-0').style.width='8px';document.getElementById('dot-0').style.background='#16c76a';
+  document.getElementById('dot-1').style.width='24px';document.getElementById('dot-1').style.background='var(--blue)';
+}
+function setupBack(){
+  document.getElementById('setup-step-1').style.display='none';
+  document.getElementById('setup-step-0').style.display='block';
+}
+function setupFinish(){
+  const name=document.getElementById('setup-admin-name').value.trim();
+  const pin=document.getElementById('setup-pin').value;
+  const pin2=document.getElementById('setup-pin2').value;
+  const err=document.getElementById('setup-err');
+  err.style.display='none';
+  if(!name){err.textContent='Enter your name';err.style.display='block';return}
+  if(pin.length!==4){err.textContent='PIN must be 4 digits';err.style.display='block';return}
+  if(pin!==pin2){err.textContent='PINs do not match';err.style.display='block';return}
+  const admin={id:genId(),name,avatar:S.setupAvatar,role:'admin',pinHash:hashPin(pin),active:true};
+  S.users=[admin];
+  sv('tt_company',S.company);sv('tt_users',S.users);
+  // If Firebase already configured (pre-shared config), try connect
+  tryAutoConnect();
+  showLoginScreen();
+}
+
+// ══════════════════════════════════
+//  LOGIN / PIN
+// ══════════════════════════════════
+function showLoginScreen(){
+  const c=S.company;
+  const badge=document.getElementById('login-company-badge');
+  badge.textContent=c?.logo||'🚌';
+  badge.style.background=c?.color||'#2563eb';
+  document.getElementById('login-company-name').textContent=c?.name||'TapTicket';
+  // Populate user selector
+  const sel=document.getElementById('user-selector');
+  sel.innerHTML=S.users.map(u=>`
+    <button class="user-pill${S.loginUserId===u.id?' active':''}" onclick="selectLoginUser('${u.id}',this)">
+      ${u.avatar||'👤'} ${u.name}
+    </button>`).join('');
+  if(!S.loginUserId&&S.users.length>0){
+    S.loginUserId=S.users[0].id;
+    sel.querySelector('.user-pill')?.classList.add('active');
+  }
+  S.pinEntry='';updatePinDots();
+  showScreen('login');
+}
+function selectLoginUser(id,btn){
+  S.loginUserId=id;S.pinEntry='';
+  document.querySelectorAll('.user-pill').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+}
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById(`pd${i}`);
+    d.classList.toggle('filled',i<S.pinEntry.length);
+  }
+}
+function pinPress(d){
+  if(S.pinEntry.length>=4)return;
+  S.pinEntry+=d;updatePinDots();
+  if(S.pinEntry.length===4)checkPin();
+}
+function pinDel(){S.pinEntry=S.pinEntry.slice(0,-1);updatePinDots()}
+function checkPin(){
+  const user=S.users.find(u=>u.id===S.loginUserId);
+  if(!user)return;
+  if(hashPin(S.pinEntry)===user.pinHash){
+    S.currentUser=user;S.pinEntry='';
+    initApp();showScreen('app');
+  } else {
+    document.getElementById('pin-error').textContent='Wrong PIN — try again';
+    S.pinEntry='';updatePinDots();
+    setTimeout(()=>document.getElementById('pin-error').textContent='',2000);
+  }
+}
+function doSignOut(){S.currentUser=null;S.pinEntry='';S.boUnlocked=false;showLoginScreen()}
+
+// ══════════════════════════════════
+//  APP INIT
+// ══════════════════════════════════
+function initApp(){
+  updateHeader();
+  switchTab('issue');
+}
+function updateHeader(){
+  const c=S.company;const u=S.currentUser;
+  const logo=document.getElementById('hdr-logo');
+  logo.textContent=c?.logo||'🚌';logo.style.background=c?.color||'#2563eb';
+  document.getElementById('hdr-company').textContent=c?.name||'TapTicket';
+  document.getElementById('hdr-busreg').textContent=c?.busReg||'';
+  document.getElementById('hdr-user').textContent=`${u?.avatar||'👤'} ${u?.name||''}`;
+  updateHeaderStats();
+  updateChangeAlert();
+}
+function updateHeaderStats(){
+  const today=new Date().toDateString();
+  const rev=S.tickets.filter(t=>new Date(t.ts).toDateString()===today).reduce((s,t)=>s+t.amount,0);
+  const exp=S.payments.filter(p=>new Date(p.ts).toDateString()===today).reduce((s,p)=>s+p.amount,0);
+  document.getElementById('hdr-today').innerHTML=
+    `<span style="color:var(--green)">$${fmt(rev)}</span> <span style="color:var(--red)">$${fmt(exp)}</span>`;
+}
+function updateChangeAlert(){
+  const pending=S.tickets.filter(t=>t.owesChange);
+  const el=document.getElementById('change-alert');
+  if(pending.length>0){
+    el.style.display='flex';
+    const total=pending.reduce((s,t)=>s+t.changeOwed,0);
+    document.getElementById('change-alert-text').textContent=`⚠ ${pending.length} ticket(s) owe change`;
+    document.getElementById('change-alert-amount').textContent=`$${fmt(total)}`;
+  } else {
+    el.style.display='none';
+  }
+}
+
+// ══════════════════════════════════
+//  TAB ROUTING
+// ══════════════════════════════════
+function switchTab(tab){
+  S.currentTab=tab;
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`nav-${tab}`)?.classList.add('active');
+  renderTab(tab);
+}
+function renderTab(tab){
+  const el=document.getElementById('tab-content');
+  el.innerHTML='';
+  el.scrollTop=0;
+  if(tab==='issue')renderIssue(el);
+  else if(tab==='history')renderHistory(el);
+  else if(tab==='pay')renderPay(el);
+  else if(tab==='check')renderCheck(el);
+  else if(tab==='settings')renderSettings(el);
+}
+
+// ══════════════════════════════════
+//  ISSUE TAB
+// ══════════════════════════════════
+function renderIssue(el){
+  const fare=calcFare();
+  const tendered=parseFloat(S.amountTendered)||0;
+  const change=tendered-fare;
+  const canIssue=fare>0&&(S.selectedRoute||(S.customFrom&&S.customTo));
+
+  el.innerHTML=`
+  <div class="fadein">
+    <!-- Type toggle -->
+    <div class="seg" style="margin-bottom:14px">
+      <button class="seg-btn${S.ticketType==='passenger'?' active':''}" onclick="setTicketType('passenger')">👤 Passenger</button>
+      <button class="seg-btn${S.ticketType==='goods'?' active':''}" onclick="setTicketType('goods')">📦 Goods</button>
+    </div>
+
+    <!-- Routes -->
+    <span class="label">Route</span>
+    <div class="route-grid">
+      ${ROUTES_PRESET.map(r=>{
+        const sel=S.selectedRoute&&S.selectedRoute.from===r.from&&S.selectedRoute.to===r.to;
+        return`<button class="route-chip${sel?' selected':''}" onclick="selectRoute('${r.from}','${r.to}',${r.fare})">
+          <div class="route-chip-name">${r.from} → ${r.to}</div>
+          <div class="route-chip-fare">$${r.fare}</div>
+        </button>`;
+      }).join('')}
+    </div>
+
+    <div class="row2">
+      <div><span class="label" style="margin-top:0">From</span><input class="inp" id="inp-from" value="${S.selectedRoute?S.selectedRoute.from:S.customFrom}" placeholder="Departure" oninput="S.customFrom=this.value;S.selectedRoute=null;refreshFareDisplay()"/></div>
+      <div><span class="label" style="margin-top:0">To</span><input class="inp" id="inp-to" value="${S.selectedRoute?S.selectedRoute.to:S.customTo}" placeholder="Destination" oninput="S.customTo=this.value;S.selectedRoute=null;refreshFareDisplay()"/></div>
+    </div>
+
+    ${S.ticketType==='passenger'?`
+      <div class="row2">
+        <div>
+          <span class="label">Passengers</span>
+          <div class="pax-ctrl">
+            <button class="pax-btn" style="background:var(--bg4)" onclick="setPax(${Math.max(1,S.pax-1)})">−</button>
+            <div class="pax-val">${S.pax}</div>
+            <button class="pax-btn" style="background:var(--blue2)" onclick="setPax(${S.pax+1})">+</button>
+          </div>
+        </div>
+        <div><span class="label">Seat # (opt)</span><input class="inp" id="inp-seat" value="${S.seatNo}" placeholder="14A" oninput="S.seatNo=this.value"/></div>
+      </div>
+    `:`
+      <span class="label">Goods Type</span>
+      <div class="goods-pills">
+        ${GOODS_TYPES.map(g=>`<button class="goods-pill${S.goodsType===g?' sel':''}" onclick="setGoodsType('${g}')">${g}</button>`).join('')}
+      </div>
+      <div class="row2">
+        <div><span class="label">Weight (kg)</span><input class="inp" id="inp-weight" value="${S.goodsWeight}" type="number" placeholder="kg" oninput="S.goodsWeight=this.value"/></div>
+        <div><span class="label">Description</span><input class="inp" id="inp-desc" value="${S.goodsDesc}" placeholder="Brief description" oninput="S.goodsDesc=this.value"/></div>
+      </div>
+    `}
+
+    ${!S.selectedRoute?`
+      <span class="label">Custom Fare ($)</span>
+      <input class="inp" id="inp-custom-fare" type="number" value="${S.customFare}" placeholder="0.00" oninput="S.customFare=this.value;refreshFareDisplay()"/>
+    `:''}
+
+    <div style="background:var(--bg3);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:var(--muted);font-size:14px">Total Fare</span>
+      <span style="font-size:22px;font-weight:800;color:var(--green);font-family:var(--mono)" id="fare-display">$${fmt(fare)}</span>
+    </div>
+
+    <span class="label">Payment Method</span>
+    <div style="display:flex;gap:6px">
+      ${['Cash','EcoCash','OneMoney','InnBucks'].map(m=>`
+        <button onclick="setPayMethod('${m}')" style="flex:1;padding:9px 4px;border-radius:8px;border:1.5px solid ${S.payMethod===m?'var(--blue)':'var(--border)'};background:${S.payMethod===m?'var(--blue-bg)':'var(--bg3)'};color:${S.payMethod===m?'#fff':'var(--muted)'};font-size:11px;font-weight:${S.payMethod===m?700:400}">${m}</button>
+      `).join('')}
+    </div>
+
+    <span class="label">Amount Tendered ($)</span>
+    <div class="quick-amounts">
+      ${fare>0?`<button class="quick-chip exact" onclick="setTendered('${fmt(fare)}')">Exact $${fmt(fare)}</button>`:''}
+      ${fare>0?[1,2,5,10].map(x=>`<button class="quick-chip${parseFloat(S.amountTendered)===(fare+x)?' active':''}" onclick="setTendered('${fmt(fare+x)}')">${fmt(fare+x)}</button>`).join(''):''}
+    </div>
+    <input class="inp" id="inp-tendered" type="number" value="${S.amountTendered}" placeholder="${fare>0?fmt(fare)+' or more':'Enter amount'}" oninput="S.amountTendered=this.value;refreshChangeDisplay()"/>
+
+    ${tendered>0?`
+      <div class="${change<0?'change-banner':'change-ok-banner'}">
+        <span>${change<0?`⚠ Owes passenger $${fmt(Math.abs(change))} change`:`✓ Give change: $${fmt(change)}`}</span>
+      </div>
+    `:''}
+
+    <button class="btn-primary${S.ticketType==='goods'?' btn-amber':''}" style="margin-top:14px;${!canIssue?'background:var(--bg3);color:var(--dim);':''}${S.ticketType==='goods'?'background:linear-gradient(135deg,#f5a623,#d97706)':''}" onclick="issueTicket()" ${!canIssue?'disabled':''}>
+      ${S.ticketType==='goods'?'📦':'🎟'} Issue ${S.ticketType==='goods'?'Goods':'Passenger'} Ticket
+    </button>
+
+    ${S.tickets.length>0?`
+      <div class="section-title">Recent Tickets</div>
+      ${S.tickets.slice(0,3).map(t=>ticketCard(t)).join('')}
+    `:''}
+  </div>`;
+}
+
+function calcFare(){
+  if(S.selectedRoute)return S.selectedRoute.fare*(S.ticketType==='passenger'?S.pax:1);
+  return parseFloat(S.customFare)||0;
+}
+function refreshFareDisplay(){
+  const el=document.getElementById('fare-display');
+  if(el)el.textContent='$'+fmt(calcFare());
+}
+function refreshChangeDisplay(){
+  // Just re-render the change banner area — lightweight approach
+  renderTab('issue');
+}
+function selectRoute(from,to,fare){
+  if(S.selectedRoute&&S.selectedRoute.from===from&&S.selectedRoute.to===to){S.selectedRoute=null;}
+  else{S.selectedRoute={from,to,fare};}
+  renderTab('issue');
+}
+function setTicketType(t){S.ticketType=t;renderTab('issue')}
+function setPax(n){S.pax=n;renderTab('issue')}
+function setGoodsType(g){S.goodsType=g;renderTab('issue')}
+function setPayMethod(m){S.payMethod=m;renderTab('issue')}
+function setTendered(v){S.amountTendered=v;renderTab('issue')}
+
+function issueTicket(){
+  const fare=calcFare();
+  if(fare<=0)return;
+  const from=S.selectedRoute?S.selectedRoute.from:S.customFrom;
+  const to=S.selectedRoute?S.selectedRoute.to:S.customTo;
+  if(!from||!to)return;
+  const tendered=parseFloat(S.amountTendered)||0;
+  const change=tendered-fare;
+  const base={
+    id:genId(),ts:Date.now(),ticketType:S.ticketType,
+    from,to,amount:fare,paymentMethod:S.payMethod,
+    owesChange:change<0,changeOwed:change<0?Math.abs(change):0,
+    issuedBy:S.currentUser?.name||'',
+    issuedById:S.currentUser?.id||'',
+  };
+  if(S.ticketType==='passenger')Object.assign(base,{pax:S.pax,seatNo:S.seatNo});
+  else Object.assign(base,{goodsType:S.goodsType,weight:parseFloat(S.goodsWeight)||0,description:S.goodsDesc});
+  base.sig=signTicket(base);
+  S.tickets.unshift(base);
+  syncTicket(base);
+  S.amountTendered='';S.seatNo='';
+  updateHeaderStats();updateChangeAlert();
+  toast(S.ticketType==='goods'?'📦 Goods ticket issued!':'🎟 Ticket issued!');
+  renderTab('issue');
+}
+
+// ══════════════════════════════════
+//  TICKET CARD HTML
+// ══════════════════════════════════
+function ticketCard(t){
+  const valid=verifyTicket(t);
+  const isGoods=t.ticketType==='goods';
+  const c=S.company;
+  return`
+  <div class="ticket${valid?'':' invalid'}">
+    <div class="ticket-watermark"></div>
+    ${c?.name?`
+    <div class="ticket-header">
+      <div class="company-badge" style="background:${c.color||'#2563eb'}">${c.logo||'🚌'}</div>
+      <div>
+        <div class="ticket-company">${c.name}</div>
+        ${c.regNumber?`<div class="ticket-reg">Reg: ${c.regNumber}</div>`:''}
+        ${c.busReg?`<div class="ticket-reg">${c.busReg}</div>`:''}
+      </div>
+      ${t.issuedBy?`<div class="ticket-issued-by">By: ${t.issuedBy}</div>`:''}
+    </div>`:''}
+    <div class="ticket-body">
+      <div>
+        <div style="display:flex;gap:5px;align-items:center;margin-bottom:4px">
+          <span class="ticket-badge" style="background:${isGoods?'var(--amber)':'var(--blue2)'};color:#fff">${isGoods?'GOODS':'PASSENGER'}</span>
+          ${t.owesChange?`<span class="ticket-badge badge-change">OWES CHANGE</span>`:''}
+        </div>
+        <div class="ticket-route">${t.from} → ${t.to}</div>
+        <div class="ticket-sub">${isGoods?`${t.goodsType} · ${t.weight}kg · ${t.description||''}`:(`Seat: ${t.seatNo||'Open'} · ${t.pax} pax`)}</div>
+      </div>
+      <div>
+        <div class="ticket-amount">$${fmt(t.amount)}</div>
+        ${t.owesChange?`<div class="ticket-change-owed">Change: $${fmt(t.changeOwed)}</div>`:''}
+        <div style="font-size:10px;color:var(--dim);text-align:right;margin-top:2px">${t.paymentMethod}</div>
+      </div>
+    </div>
+    <div class="ticket-footer">
+      <div>
+        <div class="ticket-id">#${t.id}</div>
+        <div class="ticket-id">${new Date(t.ts).toLocaleString('en-ZW',{hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <img src="${makeQR(t.id+t.sig)}" class="ticket-qr"/>
+        <div class="ticket-actions">
+          ${t.owesChange?`<button class="btn-small" style="background:var(--green);color:#fff" onclick="clearChange('${t.id}')">✓ Change Given</button>`:''}
+          <button class="btn-small" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);color:#fff" onclick="openShare('${t.id}')">Share ↗</button>
+        </div>
+      </div>
+    </div>
+    ${!valid?`<div style="background:var(--red);color:#fff;text-align:center;font-size:11px;font-weight:700;padding:4px;margin-top:8px;border-radius:6px">⚠ INVALID TICKET — TAMPERED</div>`:''}
+  </div>`;
+}
+
+function clearChange(id){
+  S.tickets=S.tickets.map(t=>t.id===id?{...t,owesChange:false,changeOwed:0}:t);
+  syncTicketUpdate(id,{owesChange:false,changeOwed:0});
+  updateChangeAlert();updateHeaderStats();
+  toast('✓ Change cleared');
+  renderTab(S.currentTab);
+}
+
+// ══════════════════════════════════
+//  HISTORY TAB
+// ══════════════════════════════════
+function renderHistory(el){
+  const today=new Date().toDateString();
+  const todayT=S.tickets.filter(t=>new Date(t.ts).toDateString()===today);
+  const pending=S.tickets.filter(t=>t.owesChange);
+  el.innerHTML=`
+  <div class="fadein">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" style="color:var(--green)">${S.tickets.length}</div><div class="stat-lbl">Total</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--blue)">${todayT.length}</div><div class="stat-lbl">Today</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--red)">${pending.length}</div><div class="stat-lbl">Owe Change</div></div>
+    </div>
+    ${pending.length>0?`
+      <div class="section-title" style="color:var(--red)">⚠ Change Owed</div>
+      ${pending.map(t=>ticketCard(t)).join('')}
+      <div style="border-top:1px solid var(--border);margin:14px 0"></div>
+    `:''}
+    <div class="section-title">All Tickets</div>
+    ${S.tickets.length===0?`<div style="color:var(--dim);text-align:center;padding:40px">No tickets yet</div>`:''}
+    ${S.tickets.map(t=>ticketCard(t)).join('')}
+  </div>`;
+}
+
+// ══════════════════════════════════
+//  PAY OUT TAB
+// ══════════════════════════════════
+function renderPay(el){
+  el.innerHTML=`
+  <div class="fadein">
+    <span class="label" style="margin-top:0">Category</span>
+    <div class="pay-grid">
+      ${PAY_CATS.map(c=>`
+        <button class="pay-cat${S.payCategory===c.id?' selected':''}" onclick="setPayCat('${c.id}')">
+          <div class="pay-cat-icon">${c.icon}</div>
+          <div class="pay-cat-label">${c.label}</div>
+        </button>`).join('')}
+    </div>
+
+    <span class="label">Amount ($)</span>
+    <div class="quick-amounts">
+      ${[1,2,5,10,20,50].map(a=>`<button class="quick-chip${parseFloat(S.payAmount)===a?' active':''}" onclick="setPayAmountQ(${a})">$${a}</button>`).join('')}
+    </div>
+    <input class="inp" id="inp-pay-amount" type="number" value="${S.payAmount}" placeholder="Custom amount" oninput="S.payAmount=this.value"/>
+
+    <span class="label">Payment Method</span>
+    <div style="display:flex;gap:8px">
+      ${['Cash','EcoCash','OneMoney'].map(m=>`
+        <button onclick="setPayOutMethod('${m}')" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid ${S.payOutMethod===m?'var(--blue)':'var(--border)'};background:${S.payOutMethod===m?'var(--blue-bg)':'var(--bg3)'};color:${S.payOutMethod===m?'#fff':'var(--muted)'};font-size:12px">${m}</button>
+      `).join('')}
+    </div>
+
+    <span class="label">Note (optional)</span>
+    <input class="inp" id="inp-pay-note" value="${S.payNote}" placeholder="e.g. Tollgate Mutare road" oninput="S.payNote=this.value"/>
+
+    <button class="btn-primary btn-amber" style="margin-top:14px;${!(S.payCategory&&S.payAmount)?'background:var(--bg3);color:var(--dim);':''}" onclick="recordPayment()" ${!(S.payCategory&&S.payAmount)?'disabled':''}>
+      💸 Record Payment
+    </button>
+
+    ${S.payments.length>0?`
+      <div class="section-title">Payment History</div>
+      ${S.payments.map(p=>{
+        const cat=PAY_CATS.find(c=>c.id===p.category);
+        return`<div class="pay-item" style="border-left-color:${cat?.color||'var(--border)'}">
+          <div>
+            <div style="font-size:13px;font-weight:600">${cat?.icon||''} ${cat?.label||p.category}</div>
+            ${p.note?`<div style="font-size:11px;color:var(--muted)">${p.note}</div>`:''}
+            <div style="font-size:10px;color:var(--dim)">${new Date(p.ts).toLocaleString('en-ZW')} · ${p.method}${p.recordedBy?' · '+p.recordedBy:''}</div>
+          </div>
+          <div style="color:var(--red);font-weight:700;font-size:15px">−$${fmt(p.amount)}</div>
+        </div>`;
+      }).join('')}
+    `:''}
+  </div>`;
+}
+function setPayCat(id){S.payCategory=id;renderTab('pay')}
+function setPayAmountQ(a){S.payAmount=String(a);renderTab('pay')}
+function setPayOutMethod(m){S.payOutMethod=m;renderTab('pay')}
+function recordPayment(){
+  if(!S.payCategory||!S.payAmount)return;
+  const cat=PAY_CATS.find(c=>c.id===S.payCategory);
+  const note=document.getElementById('inp-pay-note')?.value||S.payNote;
+  const amount=parseFloat(document.getElementById('inp-pay-amount')?.value||S.payAmount)||0;
+  S.payments.unshift({
+    id:genId(),ts:Date.now(),category:S.payCategory,
+    label:cat?.label,amount,note,method:S.payOutMethod,
+    recordedBy:S.currentUser?.name||''
+  });
+  syncPayment(S.payments[0]);
+  S.payAmount='';S.payNote='';S.payCategory=null;
+  updateHeaderStats();
+  toast('💸 Payment recorded');
+  renderTab('pay');
+}
+
+// ══════════════════════════════════
+//  CHECKER TAB
+// ══════════════════════════════════
+function renderCheck(el){
+  el.innerHTML=`
+  <div class="fadein">
+    <div class="card" style="text-align:center;margin-bottom:14px">
+      <div style="font-size:36px;margin-bottom:6px">🔍</div>
+      <div style="font-size:15px;font-weight:700">Ticket Checker Module</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">Enter Ticket ID or Security Code</div>
+    </div>
+    <span class="label" style="margin-top:0">Ticket ID or Security Code</span>
+    <input class="inp" id="inp-check" value="${S.checkInput}" placeholder="e.g. LK3M9XAB" style="text-transform:uppercase;margin-bottom:10px" oninput="S.checkInput=this.value.toUpperCase()"/>
+    <button class="btn-primary" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)" onclick="checkTicket()">✅ Verify Ticket</button>
+    <div id="check-result-area" style="margin-top:14px"></div>
+    <div class="card-inset" style="margin-top:16px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Security Info</div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.7">Each ticket has a cryptographic signature. Any modification breaks the signature — making forgery detectable instantly.</div>
+    </div>
+  </div>`;
+}
+function checkTicket(){
+  const q=document.getElementById('inp-check')?.value.trim().toUpperCase()||S.checkInput;
+  const t=S.tickets.find(tk=>tk.id===q||tk.sig===q);
+  const area=document.getElementById('check-result-area');
+  if(!t){
+    area.innerHTML=`<div class="check-result notfound card"><div style="text-align:center"><div style="font-size:36px;margin-bottom:8px">⚠️</div><div style="font-size:16px;font-weight:700;color:var(--amber)">Ticket Not Found</div><div style="color:var(--muted);font-size:13px;margin-top:4px">Not issued on this device</div></div></div>`;return;
+  }
+  const valid=verifyTicket(t);
+  if(!valid){
+    area.innerHTML=`<div class="check-result invalid card"><div style="text-align:center"><div style="font-size:36px;margin-bottom:8px">🚫</div><div style="font-size:16px;font-weight:700;color:var(--red)">INVALID — TAMPERED</div><div style="color:var(--muted);font-size:13px;margin-top:4px">Signature mismatch. Possible forgery.</div></div></div>`;return;
+  }
+  area.innerHTML=`
+  <div class="check-result valid card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div><div style="color:var(--green);font-size:16px;font-weight:800">✓ VALID TICKET</div>${t.issuedBy?`<div style="color:var(--muted);font-size:11px">By: ${t.issuedBy}</div>`:''}</div>
+      <img src="${makeQR(t.id+t.sig)}" style="width:52px;height:52px;border-radius:6px"/>
+    </div>
+    ${[
+      ['Route',`${t.from} → ${t.to}`],['Type',t.ticketType?.toUpperCase()],
+      ['Amount',`$${fmt(t.amount)}`],['Payment',t.paymentMethod],
+      ['Issued',new Date(t.ts).toLocaleString('en-ZW')],
+      ...(t.owesChange?[['⚠ Change Owed',`$${fmt(t.changeOwed)}`]]:[]),
+    ].map(([k,v])=>`<div class="check-row"><span class="check-key">${k}</span><span class="check-val" style="${k.includes('⚠')?'color:var(--amber)':''}">${v}</span></div>`).join('')}
+  </div>`;
+}
+
+// ══════════════════════════════════
+//  SETTINGS TAB
+// ══════════════════════════════════
+function renderSettings(el){
+  const u=S.currentUser;const c=S.company;
+  const isAdmin=u?.role==='admin';
+  el.innerHTML=`
+  <div class="fadein">
+    <!-- Current user card -->
+    <div class="settings-user">
+      <div class="avatar-big">${u?.avatar||'👤'}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:16px">${u?.name}</div>
+        <div style="color:var(--muted);font-size:13px">${ROLES[u?.role]||u?.role}</div>
+        <div style="color:var(--blue);font-size:11px;margin-top:2px">Signed in ✓</div>
+      </div>
+      <button onclick="doSignOut()" class="btn-small" style="background:var(--red-bg);border:1px solid var(--red);color:var(--red);padding:8px 12px">Sign Out</button>
+    </div>
+
+    <!-- Back Office -->
+    <div class="settings-item">
+      <div class="settings-item-left">
+        <div class="settings-item-title">📊 Back Office</div>
+        <div class="settings-item-sub">Live owner dashboard (PIN protected)</div>
+      </div>
+      <button class="settings-edit-btn" onclick="openBackOffice()">Open</button>
+    </div>
+
+    <!-- Firebase Cloud Sync -->
+    <div class="settings-item" style="border-color:${FB.connected&&FB.online?'var(--green)':FB.connected?'var(--amber)':'var(--border)'}">
+      <div class="settings-item-left">
+        <div class="settings-item-title">🔥 Cloud Sync
+          <span style="font-size:10px;margin-left:6px;padding:1px 8px;border-radius:10px;font-weight:700;
+            background:${FB.connected&&FB.online?'var(--green-bg)':FB.connected?'var(--amber-bg)':'var(--bg3)'};
+            color:${FB.connected&&FB.online?'var(--green)':FB.connected?'var(--amber)':'var(--dim)'};
+            border:1px solid ${FB.connected&&FB.online?'var(--green)':FB.connected?'var(--amber)':'var(--border)'}">
+            ${FB.connected&&FB.online?'LIVE':FB.connected?'OFFLINE':'OFF'}
+          </span>
+        </div>
+        <div class="settings-item-sub">${FB.connected&&FB.online?'Syncing across all devices in real-time':FB.connected?'Offline — writes queued':'Connecting to tapticket-f4d49…'}</div>
+        <div style="font-size:10px;color:var(--dim);margin-top:2px">tapticket-f4d49 · Firebase Realtime DB</div>
+      </div>
+      <button class="settings-edit-btn" style="border-color:${FB.connected&&FB.online?'var(--green)':'var(--border)'};color:${FB.connected&&FB.online?'var(--green)':'var(--blue)'}" onclick="openFbModal()">Status</button>
+    </div>
+
+    <!-- Company -->
+    <div class="settings-item">
+      <div class="settings-item-left">
+        <div class="settings-item-title">🏢 Company Details</div>
+        <div class="settings-item-sub">${c?.name||'Not configured — tap Edit'}</div>
+        ${c?.busReg?`<div style="font-size:10px;color:var(--dim)">${c.busReg}</div>`:''}
+      </div>
+      <button class="settings-edit-btn" onclick="openCompanyModal()">Edit</button>
+    </div>
+
+    <!-- Users -->
+    <div class="settings-item" style="flex-direction:column;align-items:flex-start;gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+        <div class="settings-item-left">
+          <div class="settings-item-title">👥 User Profiles</div>
+          <div class="settings-item-sub">${S.users.length} user(s)</div>
+        </div>
+        ${isAdmin?`<button class="settings-edit-btn" onclick="openAddUser()">+ Add</button>`:''}
+      </div>
+      ${S.users.map(usr=>`
+        <div class="user-row">
+          <div class="user-avatar-sm">${usr.avatar||'👤'}</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">${usr.name}</div>
+            <div style="color:var(--muted);font-size:11px">${ROLES[usr.role]||usr.role}</div>
+          </div>
+          ${isAdmin&&usr.id!==u.id?`<button class="settings-edit-btn" onclick="openEditUser('${usr.id}')">Edit</button>`:''}
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- Data stats -->
+    <div class="card" style="margin-top:10px">
+      <div style="font-weight:700;margin-bottom:10px">🗄️ Data</div>
+      <div class="bo-grid">
+        ${[
+          ['Tickets',S.tickets.length,'var(--green)'],
+          ['Payments',S.payments.length,'var(--amber)'],
+          ['Revenue','$'+fmt(S.tickets.reduce((s,t)=>s+t.amount,0)),'var(--green)'],
+          ['Expenses','$'+fmt(S.payments.reduce((s,p)=>s+p.amount,0)),'var(--red)'],
+        ].map(([l,v,col])=>`<div class="bo-stat"><div class="bo-stat-val" style="color:${col}">${v}</div><div class="bo-stat-lbl">${l}</div></div>`).join('')}
+      </div>
+      ${isAdmin?`<button class="btn-danger btn-secondary" style="margin-top:8px" onclick="clearAllData()">🗑 Clear All Data</button>`:''}
+    </div>
+
+    <!-- App info -->
+    <div style="text-align:center;padding:20px 0;color:var(--dim);font-size:11px">
+      TapTicket v1.0 · PWA · Offline-Ready<br/>
+      <span style="font-size:10px">Install via browser menu → Add to Home Screen</span>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════
+//  BACK OFFICE
+// ══════════════════════════════════
+function openBackOffice(){
+  if(S.boUnlocked||!S.company?.boPin){
+    renderBackOffice();return;
+  }
+  S.boPinEntry='';updateBoPinDots();
+  openModal('bo-pin-modal');
+}
+function updateBoPinDots(){
+  for(let i=0;i<4;i++){
+    document.getElementById(`bopd${i}`)?.classList.toggle('filled',i<S.boPinEntry.length);
+  }
+}
+function boPinPress(d){
+  if(S.boPinEntry.length>=4)return;
+  S.boPinEntry+=d;updateBoPinDots();
+  if(S.boPinEntry.length===4){
+    if(S.boPinEntry===S.company.boPin){
+      S.boUnlocked=true;closeModal('bo-pin-modal');renderBackOffice();
+    } else {
+      document.getElementById('bo-pin-error').textContent='Wrong PIN';
+      S.boPinEntry='';updateBoPinDots();
+      setTimeout(()=>document.getElementById('bo-pin-error').textContent='',2000);
+    }
+  }
+}
+function boPinDel(){S.boPinEntry=S.boPinEntry.slice(0,-1);updateBoPinDots()}
+
+function renderBackOffice(){
+  const el=document.getElementById('tab-content');
+  // Switch to back office view by replacing content (nav stays)
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  S.currentTab='backoffice';
+
+  const today=new Date().toDateString();
+  const todayT=S.tickets.filter(t=>new Date(t.ts).toDateString()===today);
+  const todayP=S.payments.filter(p=>new Date(p.ts).toDateString()===today);
+  const rev=todayT.reduce((s,t)=>s+t.amount,0);
+  const exp=todayP.reduce((s,p)=>s+p.amount,0);
+  const net=rev-exp;
+  const pending=S.tickets.filter(t=>t.owesChange);
+  const allActivity=[
+    ...todayT.map(t=>({ts:t.ts,type:'ticket',label:`${t.from}→${t.to}`,sub:`${t.ticketType} · ${t.paymentMethod} · ${t.issuedBy||''}`,amount:t.amount,color:'var(--green)',icon:'🎟'})),
+    ...todayP.map(p=>({ts:p.ts,type:'payment',label:p.label,sub:`${p.note||''} · ${p.method} · ${p.recordedBy||''}`,amount:-p.amount,color:'var(--red)',icon:PAY_CATS.find(c=>c.id===p.category)?.icon||'💸'})),
+  ].sort((a,b)=>b.ts-a.ts);
+
+  // Auto-refresh every 5 seconds
+  if(S._boRefreshTimer)clearInterval(S._boRefreshTimer);
+  S._boRefreshTimer=setInterval(()=>{
+    if(S.currentTab==='backoffice')renderBackOffice();
+    else clearInterval(S._boRefreshTimer);
+  },5000);
+
+  el.innerHTML=`
+  <div class="fadein">
+    <div class="backoffice-header">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div style="font-size:11px;color:var(--purple);font-weight:700;letter-spacing:.5px;text-transform:uppercase">Back Office</div>
+          <div style="font-size:17px;font-weight:800">${S.company?.name||'TapTicket'}</div>
+        </div>
+        <div>
+          <div class="realtime-badge">
+            <span class="live-dot"></span>
+            ${FB.connected&&FB.online?'CLOUD LIVE':'LOCAL LIVE'}
+          </div>
+          ${FB.connected?`<div style="font-size:9px;color:var(--green);margin-top:3px;text-align:right">☁ Firebase synced</div>`:`<div style="font-size:9px;color:var(--amber);margin-top:3px;text-align:right">⚠ This device only</div>`}
+          <div style="font-size:10px;color:var(--muted);text-align:right">${new Date().toLocaleTimeString('en-ZW',{hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+      </div>
+      <div class="bo-grid-3">
+        <div class="bo-stat"><div class="bo-stat-val" style="color:var(--green)">$${fmt(rev)}</div><div class="bo-stat-lbl">Revenue</div></div>
+        <div class="bo-stat"><div class="bo-stat-val" style="color:var(--red)">$${fmt(exp)}</div><div class="bo-stat-lbl">Expenses</div></div>
+        <div class="bo-stat"><div class="bo-stat-val" style="color:${net>=0?'var(--green)':'var(--red)'}">$${fmt(net)}</div><div class="bo-stat-lbl">Net</div></div>
+      </div>
+    </div>
+
+    <div class="bo-grid">
+      <div class="bo-stat"><div class="bo-stat-val" style="color:var(--blue)">${todayT.length}</div><div class="bo-stat-lbl">Tickets Today</div></div>
+      <div class="bo-stat"><div class="bo-stat-val" style="color:${pending.length>0?'var(--red)':'var(--muted)'}">${pending.length}</div><div class="bo-stat-lbl">Owe Change</div></div>
+      <div class="bo-stat"><div class="bo-stat-val" style="color:var(--amber)">${todayT.filter(t=>t.ticketType==='passenger').length}</div><div class="bo-stat-lbl">Passengers</div></div>
+      <div class="bo-stat"><div class="bo-stat-val" style="color:var(--amber)">${todayT.filter(t=>t.ticketType==='goods').length}</div><div class="bo-stat-lbl">Goods</div></div>
+    </div>
+
+    <!-- Payment breakdown -->
+    ${todayP.length>0?`
+    <div class="section-title">Today's Expenses</div>
+    <div class="card-inset" style="margin-bottom:12px">
+      ${PAY_CATS.filter(c=>todayP.some(p=>p.category===c.id)).map(c=>{
+        const total=todayP.filter(p=>p.category===c.id).reduce((s,p)=>s+p.amount,0);
+        return`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--muted);font-size:12px">${c.icon} ${c.label}</span>
+          <span style="color:var(--red);font-weight:700;font-size:12px">$${fmt(total)}</span>
+        </div>`;
+      }).join('')}
+    </div>`:''}
+
+    <!-- Activity feed -->
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div class="section-title" style="margin:0">Live Activity</div>
+      <button onclick="renderBackOffice()" style="background:none;border:none;color:var(--blue);font-size:12px">↺ Refresh</button>
+    </div>
+    <div style="margin-top:8px">
+      ${allActivity.length===0?`<div style="color:var(--dim);text-align:center;padding:30px;font-size:13px">No activity today yet</div>`:''}
+      ${allActivity.slice(0,20).map(a=>`
+        <div class="activity-item">
+          <div class="activity-icon" style="background:${a.color}22">${a.icon}</div>
+          <div class="activity-main">
+            <div class="activity-title">${a.label}</div>
+            <div class="activity-sub">${a.sub} · ${relTime(a.ts)}</div>
+          </div>
+          <div class="activity-amount" style="color:${a.amount>=0?'var(--green)':'var(--red)'}">${a.amount>=0?'+':''}$${fmt(Math.abs(a.amount))}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- Staff performance -->
+    ${S.users.length>1?`
+    <div class="section-title">Staff Today</div>
+    <div class="card-inset" style="margin-bottom:12px">
+      ${S.users.map(u=>{
+        const uTickets=todayT.filter(t=>t.issuedById===u.id);
+        const uRev=uTickets.reduce((s,t)=>s+t.amount,0);
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:16px">${u.avatar||'👤'}</span>
+            <div><div style="font-size:12px;font-weight:600">${u.name}</div><div style="font-size:10px;color:var(--muted)">${ROLES[u.role]}</div></div>
+          </div>
+          <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:var(--green)">$${fmt(uRev)}</div><div style="font-size:10px;color:var(--muted)">${uTickets.length} tickets</div></div>
+        </div>`;
+      }).join('')}
+    </div>`:''}
+
+    <button class="btn-secondary" onclick="switchTab('issue')">← Back to App</button>
+    <button class="btn-secondary" style="margin-top:8px" onclick="showReport()">📊 Generate Report</button>
+    ${!FB.connected?`
+    <div style="background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--radius-sm);padding:12px 14px;margin-top:12px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">☁️</span>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:700;color:var(--amber)">Multi-device sync not enabled</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Connect Firebase to watch live from the owner's phone</div>
+      </div>
+      <button onclick="openFbModal()" style="background:var(--amber);color:#000;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;flex-shrink:0">Setup</button>
+    </div>`:`
+    <button class="btn-secondary" style="margin-top:8px;border-color:var(--green);color:var(--green)" onclick="FB.pushAllLocal()">☁️ Push All Local Data</button>
+    `}
+  </div>`;
+}
+
+// ══════════════════════════════════
+//  REPORTS
+// ══════════════════════════════════
+function filterByPeriod(items,period){
+  const now=new Date();
+  return items.filter(i=>{
+    const d=new Date(i.ts);
+    if(period==='daily')return d.toDateString()===now.toDateString();
+    if(period==='weekly'){const w=new Date(now);w.setDate(now.getDate()-7);return d>=w;}
+    if(period==='monthly')return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+    return true;
+  });
+}
+function buildReportText(period){
+  const fT=filterByPeriod(S.tickets,period);
+  const fP=filterByPeriod(S.payments,period);
+  const rev=fT.reduce((s,t)=>s+t.amount,0);
+  const exp=fP.reduce((s,p)=>s+p.amount,0);
+  const now=new Date();
+  const labels={daily:now.toLocaleDateString('en-ZW',{weekday:'long',year:'numeric',month:'long',day:'numeric'}),
+    weekly:`Week ending ${now.toLocaleDateString('en-ZW')}`,
+    monthly:now.toLocaleDateString('en-ZW',{year:'numeric',month:'long'}),all:'All Time'};
+  const byRoute={};
+  fT.filter(t=>t.ticketType==='passenger').forEach(t=>{
+    const k=`${t.from} → ${t.to}`;if(!byRoute[k])byRoute[k]={n:0,rev:0};byRoute[k].n++;byRoute[k].rev+=t.amount;
+  });
+  const byCat={};fP.forEach(p=>{if(!byCat[p.label])byCat[p.label]=0;byCat[p.label]+=p.amount;});
+  const c=S.company;
+  return[
+    `🚌 ${c?.name||'TapTicket'} — ${period.toUpperCase()} REPORT`,
+    `📅 ${labels[period]}`,
+    c?.regNumber?`Reg: ${c.regNumber}`:'',c?.busReg?`Bus: ${c.busReg}`:'',
+    c?.phone?`Tel: ${c.phone}`:'',
+    `Issued by: ${S.currentUser?.name||'Staff'}`,
+    ``,`━━━━━━━━━━━━━━━━━━━━`,`💰 FINANCIAL SUMMARY`,`━━━━━━━━━━━━━━━━━━━━`,
+    `Revenue:    $${fmt(rev)}`,`Expenses:   $${fmt(exp)}`,`Net Profit: $${fmt(rev-exp)}`,
+    ``,`━━━━━━━━━━━━━━━━━━━━`,`🎟 TICKETS (${fT.length})`,`━━━━━━━━━━━━━━━━━━━━`,
+    `Passenger: ${fT.filter(t=>t.ticketType==='passenger').length}`,
+    `Goods:     ${fT.filter(t=>t.ticketType==='goods').length}`,
+    ``,`ROUTES:`,
+    ...Object.entries(byRoute).map(([r,d])=>`  ${r}: ${d.n} pax — $${fmt(d.rev)}`),
+    ``,`━━━━━━━━━━━━━━━━━━━━`,`💸 EXPENSES (${fP.length})`,`━━━━━━━━━━━━━━━━━━━━`,
+    ...Object.entries(byCat).map(([c,a])=>`  ${c}: $${fmt(a)}`),
+    fP.length===0?'  None recorded':'',
+    ``,`━━━━━━━━━━━━━━━━━━━━`,`Powered by TapTicket`,
+  ].filter(l=>l!==undefined).join('\n');
+}
+function showReport(){
+  S.reportPeriod='daily';
+  renderReportModal();
+  openModal('report-modal');
+}
+function setPeriod(p){
+  S.reportPeriod=p;
+  document.querySelectorAll('.period-pill').forEach(b=>b.classList.remove('active'));
+  document.getElementById('pp-'+p)?.classList.add('active');
+  renderReportModal();
+}
+function renderReportModal(){
+  const p=S.reportPeriod;
+  const fT=filterByPeriod(S.tickets,p);
+  const fP=filterByPeriod(S.payments,p);
+  const rev=fT.reduce((s,t)=>s+t.amount,0);
+  const exp=fP.reduce((s,p)=>s+p.amount,0);
+  const net=rev-exp;
+  document.getElementById('report-stats').innerHTML=[
+    `<div class="bo-stat"><div class="bo-stat-val" style="color:var(--green)">$${fmt(rev)}</div><div class="bo-stat-lbl">Revenue</div></div>`,
+    `<div class="bo-stat"><div class="bo-stat-val" style="color:var(--red)">$${fmt(exp)}</div><div class="bo-stat-lbl">Expenses</div></div>`,
+    `<div class="bo-stat"><div class="bo-stat-val" style="color:${net>=0?'var(--green)':'var(--red)'}">$${fmt(net)}</div><div class="bo-stat-lbl">Net</div></div>`,
+  ].join('');
+  document.getElementById('report-summary-cards').innerHTML=`
+    <div class="bo-grid">
+      <div class="bo-stat"><div class="bo-stat-val" style="color:var(--blue)">${fT.length}</div><div class="bo-stat-lbl">Tickets</div></div>
+      <div class="bo-stat"><div class="bo-stat-val" style="color:var(--amber)">${fP.length}</div><div class="bo-stat-lbl">Expenses</div></div>
+    </div>`;
+  document.getElementById('report-text-preview').textContent=buildReportText(p);
+}
+function reportWhatsApp(){window.open('https://wa.me/?text='+encodeURIComponent(buildReportText(S.reportPeriod)))}
+function reportSMS(){window.open('sms:?body='+encodeURIComponent(buildReportText(S.reportPeriod)))}
+function reportCopy(){navigator.clipboard?.writeText(buildReportText(S.reportPeriod));toast('📋 Report copied!')}
+
+// ══════════════════════════════════
+//  SHARE
+// ══════════════════════════════════
+function openShare(id){
+  const t=S.tickets.find(tk=>tk.id===id);
+  if(!t)return;
+  S.shareData=t;
+  const c=S.company;
+  const text=[
+    `🚌 ${c?.name||'TapTicket'} — TICKET`,
+    c?.regNumber?`Reg: ${c.regNumber}`:'',c?.busReg?`Bus: ${c.busReg}`:'',
+    c?.phone?`Tel: ${c.phone}`:'',
+    `──────────────────`,
+    `ID: ${t.id}`,`Route: ${t.from} → ${t.to}`,`Type: ${t.ticketType?.toUpperCase()}`,
+    `Amount: $${fmt(t.amount)}`,
+    t.owesChange?`⚠ Change owed: $${fmt(t.changeOwed)}`:'',
+    t.pax>1?`Passengers: ${t.pax}`:'',t.seatNo?`Seat: ${t.seatNo}`:'',
+    t.ticketType==='goods'?`Goods: ${t.goodsType} ${t.weight}kg`:'',
+    `Payment: ${t.paymentMethod}`,
+    t.issuedBy?`Issued by: ${t.issuedBy}`:'',
+    `Issued: ${new Date(t.ts).toLocaleString('en-ZW')}`,
+    `──────────────────`,`Security: ${t.sig}`,`Verify on TapTicket App`,
+  ].filter(Boolean).join('\n');
+  document.getElementById('share-text').textContent=text;
+  openModal('share-modal');
+}
+function shareWhatsApp(){if(S.shareData)window.open('https://wa.me/?text='+encodeURIComponent(document.getElementById('share-text').textContent))}
+function shareSMS(){if(S.shareData)window.open('sms:?body='+encodeURIComponent(document.getElementById('share-text').textContent))}
+function shareCopy(){navigator.clipboard?.writeText(document.getElementById('share-text').textContent);toast('📋 Copied!');closeModal('share-modal')}
+
+// ══════════════════════════════════
+//  COMPANY MODAL
+// ══════════════════════════════════
+function openCompanyModal(){
+  const c=S.company||{};
+  S.coLogo=c.logo||'🚌';S.coColor=c.color||'#2563eb';
+  document.getElementById('co-name').value=c.name||'';
+  document.getElementById('co-bus-reg').value=c.busReg||'';
+  document.getElementById('co-reg-num').value=c.regNumber||'';
+  document.getElementById('co-license').value=c.operatorLicense||'';
+  document.getElementById('co-phone').value=c.phone||'';
+  document.getElementById('co-address').value=c.address||'';
+  document.getElementById('co-bo-pin').value=c.boPin||'';
+  updateCoPreview();
+  // Sync logo/color selections
+  document.querySelectorAll('#co-logo-grid .logo-btn').forEach(b=>{b.classList.toggle('sel',b.textContent===S.coLogo)});
+  document.querySelectorAll('#co-color-grid .color-swatch').forEach(b=>{
+    const bc=b.style.background;b.classList.toggle('sel',bc===S.coColor||rgbToHex(bc)===S.coColor);
+  });
+  openModal('company-modal');
+}
+function rgbToHex(rgb){const m=rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);if(!m)return rgb;return'#'+[m[1],m[2],m[3]].map(x=>parseInt(x).toString(16).padStart(2,'0')).join('')}
+function coSelectLogo(btn,logo){
+  document.querySelectorAll('#co-logo-grid .logo-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');S.coLogo=logo;updateCoPreview();
+}
+function coSelectColor(btn,col){
+  document.querySelectorAll('#co-color-grid .color-swatch').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');S.coColor=col;updateCoPreview();
+}
+function updateCoPreview(){
+  document.getElementById('co-prev-badge').textContent=S.coLogo;
+  document.getElementById('co-prev-badge').style.background=S.coColor;
+  document.getElementById('co-prev-name').textContent=document.getElementById('co-name').value||'Your Company';
+  document.getElementById('co-prev-reg').textContent=document.getElementById('co-reg-num').value||'Registration';
+}
+document.getElementById('co-name').addEventListener?.('input',updateCoPreview);
+function saveCompany(){
+  const name=document.getElementById('co-name').value.trim();
+  if(!name){toast('Enter company name','#f04060');return}
+  S.company={
+    ...(S.company||{}),
+    name,logo:S.coLogo,color:S.coColor,
+    busReg:document.getElementById('co-bus-reg').value.trim(),
+    regNumber:document.getElementById('co-reg-num').value.trim(),
+    operatorLicense:document.getElementById('co-license').value.trim(),
+    phone:document.getElementById('co-phone').value.trim(),
+    address:document.getElementById('co-address').value.trim(),
+    boPin:document.getElementById('co-bo-pin').value.trim(),
+  };
+  sv('tt_company',S.company);
+  syncCompany(S.company);
+  updateHeader();
+  closeModal('company-modal');
+  toast('✓ Company details saved');
+  renderTab('settings');
+}
+
+// ══════════════════════════════════
+//  USER MANAGEMENT
+// ══════════════════════════════════
+function openAddUser(){S.editingUserId=null;S.userAvatar='👤';S.userRole='conductor';resetUserModal('Add User');openModal('user-modal')}
+function openEditUser(id){
+  S.editingUserId=id;
+  const u=S.users.find(usr=>usr.id===id);
+  if(!u)return;
+  S.userAvatar=u.avatar||'👤';S.userRole=u.role||'conductor';
+  document.getElementById('user-name-inp').value=u.name;
+  document.getElementById('user-modal-title').textContent='Edit User';
+  document.getElementById('user-pin-label').textContent='New PIN (leave blank to keep)';
+  document.getElementById('user-pin2-label').textContent='Confirm New PIN';
+  syncUserAvatarGrid();syncUserRoleGrid();
+  openModal('user-modal');
+}
+function resetUserModal(title){
+  document.getElementById('user-modal-title').textContent=title;
+  document.getElementById('user-name-inp').value='';
+  document.getElementById('user-pin-inp').value='';
+  document.getElementById('user-pin2-inp').value='';
+  document.getElementById('user-pin-label').textContent='Set 4-Digit PIN *';
+  document.getElementById('user-pin2-label').textContent='Confirm PIN *';
+  document.getElementById('user-modal-err').style.display='none';
+  syncUserAvatarGrid();syncUserRoleGrid();
+}
+function userSelectAvatar(btn,av){
+  document.querySelectorAll('#user-avatar-grid .logo-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');S.userAvatar=av;
+}
+function userSelectRole(btn,role){
+  document.querySelectorAll('#user-role-grid .seg-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');S.userRole=role;
+}
+function syncUserAvatarGrid(){
+  document.querySelectorAll('#user-avatar-grid .logo-btn').forEach(b=>{b.classList.toggle('sel',b.textContent===S.userAvatar)});
+}
+function syncUserRoleGrid(){
+  document.querySelectorAll('#user-role-grid .seg-btn').forEach(b=>{
+    const r=b.getAttribute('onclick')?.match(/'([^']+)'\)/)?.[1];
+    b.classList.toggle('active',r===S.userRole);
+  });
+}
+function saveUser(){
+  const name=document.getElementById('user-name-inp').value.trim();
+  const pin=document.getElementById('user-pin-inp').value;
+  const pin2=document.getElementById('user-pin2-inp').value;
+  const err=document.getElementById('user-modal-err');
+  err.style.display='none';
+  if(!name){err.textContent='Enter name';err.style.display='block';return}
+  if(S.editingUserId){
+    if(pin&&pin.length!==4){err.textContent='PIN must be 4 digits';err.style.display='block';return}
+    if(pin&&pin!==pin2){err.textContent='PINs do not match';err.style.display='block';return}
+    S.users=S.users.map(u=>{
+      if(u.id!==S.editingUserId)return u;
+      return{...u,name,avatar:S.userAvatar,role:S.userRole,...(pin?{pinHash:hashPin(pin)}:{})};
+    });
+  } else {
+    if(pin.length!==4){err.textContent='PIN must be 4 digits';err.style.display='block';return}
+    if(pin!==pin2){err.textContent='PINs do not match';err.style.display='block';return}
+    S.users.push({id:genId(),name,avatar:S.userAvatar,role:S.userRole,pinHash:hashPin(pin),active:true});
+  }
+  sv('tt_users',S.users);
+  syncUsers(S.users);
+  closeModal('user-modal');
+  toast('✓ User saved');
+  renderTab('settings');
+}
+
+function clearAllData(){
+  if(!confirm('Clear ALL tickets and payments? Cannot be undone.'))return;
+  S.tickets=[];S.payments=[];
+  sv('tt_tickets',[]);sv('tt_payments',[]);
+  if(FB.connected&&FB.online){
+    FB.write('tickets',{});
+    FB.write('payments',{});
+  }
+  updateHeaderStats();updateChangeAlert();
+  toast('Data cleared','#f04060');
+  renderTab('settings');
+}
+
+// ══════════════════════════════════
+//  BOOT
+// ══════════════════════════════════
+boot();
+</script>
+
+<!-- PWA Service Worker -->
+<script>
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+// iOS install hint
+window.addEventListener('load',()=>{
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone=window.navigator.standalone;
+  if(isIOS&&!isStandalone&&!localStorage.getItem('tt_ios_hint')){
+    localStorage.setItem('tt_ios_hint','1');
+    setTimeout(()=>{
+      const el=document.getElementById('toast');
+      el.textContent='📲 Tap Share → Add to Home Screen to install';
+      el.style.background='#1d4ed8';el.classList.add('show');
+      setTimeout(()=>el.classList.remove('show'),4000);
+    },3000);
+  }
+});
+</script>
+</body>
+</html>
